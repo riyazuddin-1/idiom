@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin",
-	"api/auth"
+    "github.com/gin-gonic/gin"
+    "idiom-api-services/api/auth"
 )
 
 func main() {
-	router := gin.Default()
+    router := gin.Default()
 	
-	api = router.Group("/api")
-	Auth(api)
+    api := router.Group("/api/v1")
+    routes.Mount(api)
 
-	router.Run(":8080")
+    router.Run(":8080")
 }
