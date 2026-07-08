@@ -23,12 +23,14 @@ func main() {
 	mux := http.NewServeMux()
 
 	// API v1 subrouter
-	api.Mount(mux, authHandler)
-	web.Mount(mux)
+	apiMux := http.NewServeMux()
+	api.Mount(apiMux, authHandler)
 
-	// Mount under /api/v1/
-	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", mux))
-	mux.Handle("/web/", http.StripPrefix("/web/", mux))
+	webMux := http.NewServeMux()
+	web.Mount(webMux)
+
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
+	mux.Handle("/web/", http.StripPrefix("/web", webMux))
 
 	server := &http.Server{
 		Addr:    ":8080",
