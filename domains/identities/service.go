@@ -15,3 +15,26 @@ func Login(ctx context.Context, email, password, projectID string) (bool, error)
 
 	return crypto.CheckPasswordHash(password, identity.Password), nil
 }
+
+func Register(ctx context.Context, email, password, projectID string) (bool, error) {
+	repo := &Repository{}
+
+	hashedPassword, err := crypto.HashPassword(password)
+
+	if err != nil {
+		return false, err
+	}
+
+	identity := &Identity{
+		Email:     email,
+		Password:  hashedPassword,
+		ProjectID: projectID,
+	}
+
+	err = repo.CreateIdentity(ctx, identity)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

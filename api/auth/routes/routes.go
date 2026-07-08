@@ -28,7 +28,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler) {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		handlers.RegisterHandler(w, r)
+		handler.RegisterHandler(w, r)
 	})
 
 	mux.HandleFunc("/password-reset", func(w http.ResponseWriter, r *http.Request) {

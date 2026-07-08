@@ -23,3 +23,8 @@ func (r *Repository) GetIdentityByEmail(ctx context.Context, email, projectID st
 		ProjectID: projectIDResult,
 	}, nil
 }
+
+func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) error {
+	_, err := r.db.Exec(ctx, "INSERT INTO identities (email, password, project_id) VALUES ($1, $2, $3)", identity.Email, identity.Password, identity.ProjectID)
+	return err
+}

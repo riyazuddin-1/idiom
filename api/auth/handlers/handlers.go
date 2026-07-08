@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"idiom-api-services/api/auth/config"
-	"idiom-api-services/api/auth/middlewares/validation"
+	"idiom-api-services/api/auth/middlewares"
 	"idiom-api-services/domains/identities"
 	"net/http"
 )
@@ -23,7 +23,7 @@ func NewHandler(config config.AppConfig) *Handler {
 }
 
 func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	req, err := validation.ValidateLoginRequest(w, r)
+	req, err := middlewares.ValidateLoginRequest(w, r)
 	if err != nil {
 		return
 	}
@@ -70,8 +70,30 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Implement logout logic here
 }
 
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	// Implement registration logic here
+func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	req, err := middlewares.ValidateRegisterRequest(w, r)
+	if err != nil {
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	ok, err := identities.Register(r.Context(), req.Email, req.Password, dummyProjectID)
+	if err != nil || !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to register user",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User registered successfully",
+		"user": map[string]string{
+			"email": req.Email,
+		},
+	})
 }
 
 func PasswordResetHandler(w http.ResponseWriter, r *http.Request) {
