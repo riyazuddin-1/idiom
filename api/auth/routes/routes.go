@@ -20,7 +20,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler) {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		handlers.LogoutHandler(w, r)
+		handler.LogoutHandler(w, r)
 	})
 
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
@@ -36,15 +36,15 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler) {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		handlers.PasswordResetHandler(w, r)
+		handler.PasswordResetHandler(w, r)
 	})
 
 	mux.HandleFunc("/me", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			handlers.GetCurrentUserHandler(w, r)
+			handler.GetCurrentUserHandler(w, r)
 		case http.MethodPut:
-			handlers.UpdateCurrentUserHandler(w, r)
+			handler.UpdateCurrentUserHandler(w, r)
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
