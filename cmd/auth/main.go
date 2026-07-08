@@ -8,8 +8,9 @@ import (
 
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
-	routes "idiom-api-services/api/auth/routes"
+	api "idiom-api-services/api/auth/routes"
 	"idiom-api-services/packages/jwt"
+	web "idiom-api-services/web/auth/routes"
 )
 
 func main() {
@@ -22,11 +23,12 @@ func main() {
 	mux := http.NewServeMux()
 
 	// API v1 subrouter
-	api := http.NewServeMux()
-	routes.Mount(api, authHandler)
+	api.Mount(mux, authHandler)
+	web.Mount(mux)
 
 	// Mount under /api/v1/
-	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", api))
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", mux))
+	mux.Handle("/web/", http.StripPrefix("/web/", mux))
 
 	server := &http.Server{
 		Addr:    ":8080",
