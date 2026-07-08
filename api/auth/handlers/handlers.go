@@ -78,8 +78,16 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	ok, err := identities.Register(r.Context(), req.Email, req.Password, dummyProjectID)
-	if err != nil || !ok {
+	identity, err := identities.Register(r.Context(), identities.RegisterInput{
+		Email:       req.Email,
+		Password:    req.Password,
+		ProjectID:   dummyProjectID,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		DisplayName: req.DisplayName,
+		AvatarURL:   req.AvatarURL,
+	})
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "Failed to register user",
@@ -90,9 +98,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "User registered successfully",
-		"user": map[string]string{
-			"email": req.Email,
-		},
+		"user":    identity,
 	})
 }
 
