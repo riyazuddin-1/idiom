@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -56,4 +57,8 @@ func (p *Postgres) Exec(ctx context.Context, query string, args ...interface{}) 
 		return pgconn.CommandTag{}, err
 	}
 	return result, nil
+}
+
+func (p *Postgres) QueryRow(ctx context.Context, query string, args ...interface{}) pgx.Row {
+	return p.pool.QueryRow(ctx, query, args...)
 }

@@ -6,13 +6,13 @@ import (
 	"idiom-api-services/api/auth/handlers"
 )
 
-func Mount(mux *http.ServeMux) {
+func Mount(mux *http.ServeMux, handler *handlers.Handler) {
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		handlers.LoginHandler(w, r)
+		handler.LoginHandler(w, r)
 	})
 
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
