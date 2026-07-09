@@ -9,6 +9,7 @@ import (
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
 	api "idiom-api-services/api/auth/routes"
+	"idiom-api-services/packages/email"
 	"idiom-api-services/packages/jwt"
 	web "idiom-api-services/web/auth/routes"
 )
@@ -16,7 +17,16 @@ import (
 func main() {
 	ctx := context.Background()
 	appConfig := config.AppConfig{
-		JWTSettings: jwt.NewJWTSettings("your-secret-key"),
+		JWTSettings: jwt.NewJWTSettings(config.JWTSecret),
+		EmailSender: email.NewSMTPSender(email.SMTPConfig{
+			Host:     config.SMTPHost,
+			Port:     config.SMTPPort,
+			Username: config.SMTPUsername,
+			Password: config.SMTPPassword,
+			From:     config.SMTPFrom,
+		}),
+		AuthBaseURL:        config.AuthBaseURL,
+		VerificationSecret: config.VerificationSecret,
 	}
 
 	authHandler := handlers.NewHandler(appConfig)
@@ -30,6 +40,7 @@ func main() {
 	web.Mount(webMux)
 
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
+	mux.Handle("/auth/v1/", http.StripPrefix("/auth/v1", apiMux))
 	mux.Handle("/web/", http.StripPrefix("/web", webMux))
 
 	server := &http.Server{

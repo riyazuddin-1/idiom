@@ -37,7 +37,16 @@ func Login(ctx context.Context, email, password, projectID string) (bool, error)
 		return false, nil
 	}
 
+	if !identity.EmailVerified {
+		return false, nil
+	}
+
 	return crypto.CheckPasswordHash(password, *identity.PasswordHash), nil
+}
+
+func VerifyEmail(ctx context.Context, email, projectID string) error {
+	repo := &Repository{}
+	return repo.VerifyIdentityEmail(ctx, strings.ToLower(strings.TrimSpace(email)), projectID)
 }
 
 func Register(ctx context.Context, input RegisterInput) (*Identity, error) {

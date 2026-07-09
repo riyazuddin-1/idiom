@@ -2,6 +2,7 @@ package identities
 
 import (
 	"context"
+	"errors"
 	"idiom-api-services/packages/database/postgres"
 )
 
@@ -11,19 +12,35 @@ type Repository struct {
 
 func (r *Repository) GetIdentityByEmail(ctx context.Context, email, projectID string) (*Identity, error) {
 	row := r.db.QueryRow(ctx, `
-		SELECT id, email, password_hash, project_id
+		SELECT id, email, password_hash, project_id, email_verified
 		FROM identities
 		WHERE email = $1 AND project_id = $2
 	`, email, projectID)
 
 	var identity Identity
 	var passwordHash string
-	if err := row.Scan(&identity.ID, &identity.Email, &passwordHash, &identity.ProjectID); err != nil {
+	if err := row.Scan(&identity.ID, &identity.Email, &passwordHash, &identity.ProjectID, &identity.EmailVerified); err != nil {
 		return nil, err
 	}
 
 	identity.PasswordHash = &passwordHash
 	return &identity, nil
+}
+
+func (r *Repository) VerifyIdentityEmail(ctx context.Context, email, projectID string) error {
+	result, err := r.db.Exec(ctx, `
+		UPDATE identities
+		SET email_verified = true,
+			updated_at = NOW()
+		WHERE email = $1 AND project_id = $2
+	`, email, projectID)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("identity not found")
+	}
+	return nil
 }
 
 func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) error {
