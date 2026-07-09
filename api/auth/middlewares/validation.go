@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/mail"
 	"strings"
 )
 
@@ -39,10 +40,20 @@ func ValidateLoginRequest(w http.ResponseWriter, r *http.Request) (*LoginRequest
 		req.Password = r.FormValue("password")
 	}
 
+	req.Email = strings.TrimSpace(req.Email)
+	req.Password = strings.TrimSpace(req.Password)
+
 	if req.Email == "" || req.Password == "" {
 		http.Error(w, "Email and password are required", http.StatusBadRequest)
 		return nil, errors.New("missing email or password")
 	}
+
+	email, err := normalizeEmail(req.Email)
+	if err != nil {
+		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		return nil, err
+	}
+	req.Email = email
 
 	return &req, nil
 }
@@ -69,7 +80,7 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 		req.AvatarURL = r.FormValue("avatar_url")
 	}
 
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.Email = strings.TrimSpace(req.Email)
 	req.Password = strings.TrimSpace(req.Password)
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
@@ -81,5 +92,27 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 		return nil, errors.New("missing email or password")
 	}
 
+	email, err := normalizeEmail(req.Email)
+	if err != nil {
+		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		return nil, err
+	}
+	req.Email = email
+
 	return &req, nil
+}
+
+func normalizeEmail(email string) (string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(email))
+
+	address, err := mail.ParseAddress(normalized)
+	if err != nil {
+		return "", err
+	}
+
+	if address.Name != "" || address.Address != normalized {
+		return "", errors.New("email must be a plain email address")
+	}
+
+	return normalized, nil
 }

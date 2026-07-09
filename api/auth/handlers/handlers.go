@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	dummyProjectID = "projectID"
+	projectID = "idiom"
 )
 
 type Handler struct {
@@ -30,7 +30,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	ok, err := identities.Login(r.Context(), req.Email, req.Password, dummyProjectID)
+	ok, err := identities.Login(r.Context(), req.Email, req.Password, projectID)
 	if err != nil || !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -47,7 +47,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.config.JWTSettings.CreateToken(req.Email, dummyProjectID)
+	token, err := h.config.JWTSettings.CreateToken(req.Email, projectID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -81,7 +81,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	identity, err := identities.Register(r.Context(), identities.RegisterInput{
 		Email:       req.Email,
 		Password:    req.Password,
-		ProjectID:   dummyProjectID,
+		ProjectID:   projectID,
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		DisplayName: req.DisplayName,
