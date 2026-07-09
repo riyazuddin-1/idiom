@@ -40,11 +40,14 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler) {
 	})
 
 	mux.HandleFunc("/password-reset", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
+		switch r.Method {
+		case http.MethodGet:
+			handler.SendPasswordResetHandler(w, r)
+		case http.MethodPost:
+			handler.UpdatePasswordHandler(w, r)
+		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
 		}
-		handler.PasswordResetHandler(w, r)
 	})
 
 	mux.HandleFunc("/me", func(w http.ResponseWriter, r *http.Request) {

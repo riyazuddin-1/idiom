@@ -43,6 +43,22 @@ func (r *Repository) VerifyIdentityEmail(ctx context.Context, email, projectID s
 	return nil
 }
 
+func (r *Repository) UpdatePassword(ctx context.Context, email, projectID, passwordHash string) error {
+	result, err := r.db.Exec(ctx, `
+		UPDATE identities
+		SET password_hash = $3,
+			updated_at = NOW()
+		WHERE email = $1 AND project_id = $2
+	`, email, projectID, passwordHash)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("identity not found")
+	}
+	return nil
+}
+
 func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) error {
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO identities (

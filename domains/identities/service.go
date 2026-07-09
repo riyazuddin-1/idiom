@@ -46,7 +46,18 @@ func Login(ctx context.Context, email, password, projectID string) (bool, error)
 
 func VerifyEmail(ctx context.Context, email, projectID string) error {
 	repo := &Repository{}
-	return repo.VerifyIdentityEmail(ctx, strings.ToLower(strings.TrimSpace(email)), projectID)
+	return repo.VerifyIdentityEmail(ctx, strings.ToLower(email), projectID)
+}
+
+func UpdatePassword(ctx context.Context, email, projectID, password string) error {
+	repo := &Repository{}
+
+	hashedPassword, err := crypto.HashPassword(password)
+	if err != nil {
+		return err
+	}
+
+	return repo.UpdatePassword(ctx, strings.ToLower(email), projectID, hashedPassword)
 }
 
 func Register(ctx context.Context, input RegisterInput) (*Identity, error) {

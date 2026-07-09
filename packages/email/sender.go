@@ -31,10 +31,6 @@ type SMTPSender struct {
 }
 
 func NewSMTPSender(config SMTPConfig) *SMTPSender {
-	config.Host = strings.TrimSpace(config.Host)
-	config.Port = strings.TrimSpace(config.Port)
-	config.From = strings.TrimSpace(config.From)
-
 	return &SMTPSender{config: config}
 }
 
@@ -45,17 +41,16 @@ func (s *SMTPSender) Send(ctx context.Context, message Message) error {
 	default:
 	}
 
-	to := strings.TrimSpace(message.To)
 	body := message.TextBody
 	contentType := "text/plain; charset=UTF-8"
-	if strings.TrimSpace(message.HTMLBody) != "" {
+	if message.HTMLBody != "" {
 		body = message.HTMLBody
 		contentType = "text/html; charset=UTF-8"
 	}
 
 	raw := strings.Join([]string{
 		"From: " + s.config.From,
-		"To: " + to,
+		"To: " + message.To,
 		"Subject: " + message.Subject,
 		"MIME-Version: 1.0",
 		"Content-Type: " + contentType,
@@ -69,7 +64,7 @@ func (s *SMTPSender) Send(ctx context.Context, message Message) error {
 		auth = smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
 	}
 
-	if err := smtp.SendMail(addr, auth, s.config.From, []string{to}, []byte(raw)); err != nil {
+	if err := smtp.SendMail(addr, auth, s.config.From, []string{message.To}, []byte(raw)); err != nil {
 		return fmt.Errorf("send email: %w", err)
 	}
 

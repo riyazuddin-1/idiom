@@ -9,16 +9,10 @@ import (
 	"idiom-api-services/packages/crypto"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type Handler struct {
 	config config.AppConfig
-}
-
-type verificationScope struct {
-	ProjectID string `json:"project_id"`
-	Email     string `json:"email"`
 }
 
 func NewHandler(config config.AppConfig) *Handler {
@@ -119,7 +113,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	scope := strings.TrimSpace(r.URL.Query().Get("scope"))
+	scope := r.URL.Query().Get("scope")
 	if scope == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -128,8 +122,16 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload verificationScope
+	var payload helpers.Scope
 	if err := crypto.DecryptJSON(scope, h.config.VerificationSecret, &payload); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Invalid verification scope",
+		})
+		return
+	}
+
+	if payload.Operation != config.OperationEmailVerification {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "Invalid verification scope",
@@ -151,8 +153,65 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) PasswordResetHandler(w http.ResponseWriter, r *http.Request) {
-	// Implement password reset logic here
+func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
+	req, err := middlewares.ValidatePasswordResetEmailRequest(w, r)
+	if err != nil {
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, req.Email, config.ProjectID); err != nil {
+		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to send password reset email",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"message": "Password reset email sent",
+	})
+}
+
+func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	req, err := middlewares.ValidatePasswordResetRequest(w, r)
+	if err != nil {
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var payload helpers.Scope
+	if err := crypto.DecryptJSON(req.Scope, h.config.VerificationSecret, &payload); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Invalid password reset scope",
+		})
+		return
+	}
+
+	if payload.Operation != config.OperationPasswordReset {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Invalid password reset scope",
+		})
+		return
+	}
+
+	if err := identities.UpdatePassword(r.Context(), payload.Email, payload.ProjectID, req.Password); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to update password",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"message": "Password updated successfully",
+	})
 }
 
 func (h *Handler) GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {

@@ -22,6 +22,16 @@ type RegisterRequest struct {
 	AvatarURL   string `json:"avatar_url"`
 }
 
+type PasswordResetEmailRequest struct {
+	Email string
+}
+
+type PasswordResetRequest struct {
+	Scope           string `json:"scope"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
+}
+
 func ValidateLoginRequest(w http.ResponseWriter, r *http.Request) (*LoginRequest, error) {
 	var req LoginRequest
 
@@ -39,9 +49,6 @@ func ValidateLoginRequest(w http.ResponseWriter, r *http.Request) (*LoginRequest
 		req.Email = r.FormValue("email")
 		req.Password = r.FormValue("password")
 	}
-
-	req.Email = strings.TrimSpace(req.Email)
-	req.Password = strings.TrimSpace(req.Password)
 
 	if req.Email == "" || req.Password == "" {
 		http.Error(w, "Email and password are required", http.StatusBadRequest)
@@ -80,13 +87,6 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 		req.AvatarURL = r.FormValue("avatar_url")
 	}
 
-	req.Email = strings.TrimSpace(req.Email)
-	req.Password = strings.TrimSpace(req.Password)
-	req.FirstName = strings.TrimSpace(req.FirstName)
-	req.LastName = strings.TrimSpace(req.LastName)
-	req.DisplayName = strings.TrimSpace(req.DisplayName)
-	req.AvatarURL = strings.TrimSpace(req.AvatarURL)
-
 	if req.Email == "" || req.Password == "" {
 		http.Error(w, "Email and password are required", http.StatusBadRequest)
 		return nil, errors.New("missing email or password")
@@ -102,8 +102,52 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 	return &req, nil
 }
 
+func ValidatePasswordResetEmailRequest(w http.ResponseWriter, r *http.Request) (*PasswordResetEmailRequest, error) {
+	email, err := normalizeEmail(r.URL.Query().Get("email"))
+	if err != nil {
+		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		return nil, err
+	}
+
+	return &PasswordResetEmailRequest{
+		Email: email,
+	}, nil
+}
+
+func ValidatePasswordResetRequest(w http.ResponseWriter, r *http.Request) (*PasswordResetRequest, error) {
+	var req PasswordResetRequest
+
+	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return nil, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return nil, err
+		}
+		req.Scope = r.FormValue("scope")
+		req.Password = r.FormValue("password")
+		req.ConfirmPassword = r.FormValue("confirm_password")
+	}
+
+	if req.Scope == "" || req.Password == "" || req.ConfirmPassword == "" {
+		http.Error(w, "Scope, password, and confirm password are required", http.StatusBadRequest)
+		return nil, errors.New("missing password reset fields")
+	}
+
+	if req.Password != req.ConfirmPassword {
+		http.Error(w, "Passwords do not match", http.StatusBadRequest)
+		return nil, errors.New("passwords do not match")
+	}
+
+	return &req, nil
+}
+
 func normalizeEmail(email string) (string, error) {
-	normalized := strings.ToLower(strings.TrimSpace(email))
+	normalized := strings.ToLower(email)
 
 	address, err := mail.ParseAddress(normalized)
 	if err != nil {
