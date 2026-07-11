@@ -3,10 +3,12 @@ package api
 import (
 	"net/http"
 
+	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
+	"idiom-api-services/api/auth/middlewares"
 )
 
-func Mount(mux *http.ServeMux, handler *handlers.Handler) {
+func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppConfig) {
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -51,6 +53,11 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler) {
 	})
 
 	mux.HandleFunc("/me", func(w http.ResponseWriter, r *http.Request) {
+		r, err := middlewares.VerifyUserToken(appConfig.JWTSettings, w, r)
+		if err != nil {
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			handler.GetCurrentUserHandler(w, r)

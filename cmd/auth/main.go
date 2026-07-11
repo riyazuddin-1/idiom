@@ -34,7 +34,7 @@ func main() {
 
 	// API v1 subrouter
 	apiMux := http.NewServeMux()
-	api.Mount(apiMux, authHandler)
+	api.Mount(apiMux, authHandler, appConfig)
 
 	webMux := http.NewServeMux()
 	web.Mount(webMux)
