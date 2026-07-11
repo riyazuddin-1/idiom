@@ -17,7 +17,7 @@ import (
 func main() {
 	ctx := context.Background()
 	appConfig := config.AppConfig{
-		JWTSettings: jwt.NewJWTSettings(config.JWTSecret),
+		JWTSettings: jwt.NewJWTSettings(config.JWTPrivateKey, config.JWTPublicKey),
 		EmailSender: email.NewSMTPSender(email.SMTPConfig{
 			Host:     config.SMTPHost,
 			Port:     config.SMTPPort,

@@ -3,7 +3,8 @@ package config
 import "os"
 
 var (
-	JWTSecret          = os.Getenv("JWT_SECRET")
+	JWTPrivateKey      = os.Getenv("JWT_PRIVATE_KEY")
+	JWTPublicKey       = os.Getenv("JWT_PUBLIC_KEY")
 	AuthBaseURL        = os.Getenv("AUTH_BASE_URL")
 	VerificationSecret = os.Getenv("VERIFICATION_SECRET")
 	SMTPHost           = os.Getenv("SMTP_HOST")
