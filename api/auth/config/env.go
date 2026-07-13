@@ -12,4 +12,6 @@ var (
 	SMTPUsername       = os.Getenv("SMTP_USERNAME")
 	SMTPPassword       = os.Getenv("SMTP_PASSWORD")
 	SMTPFrom           = os.Getenv("SMTP_FROM")
+	PostgresDSN        = os.Getenv("POSTGRES_DSN")
+	MongodbUrl         = os.Getenv("MONGODB_URL")
 )

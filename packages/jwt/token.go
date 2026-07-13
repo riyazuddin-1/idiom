@@ -6,13 +6,16 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type JWTSettings struct {
-	PrivateKey string
-	PublicKey  string
+	PrivateKey          string
+	PublicKey           string
+	ExpirationInSeconds int64
+	Issuer              string
 }
 
 type TokenClaims struct {
@@ -20,10 +23,12 @@ type TokenClaims struct {
 	ProjectID string
 }
 
-func NewJWTSettings(privateKey, publicKey string) *JWTSettings {
+func NewJWTSettings(privateKey, publicKey string, expiration int64, issuer string) *JWTSettings {
 	return &JWTSettings{
-		PrivateKey: privateKey,
-		PublicKey:  publicKey,
+		PrivateKey:          privateKey,
+		PublicKey:           publicKey,
+		ExpirationInSeconds: expiration,
+		Issuer:              issuer,
 	}
 }
 
@@ -31,6 +36,10 @@ func (j *JWTSettings) CreateToken(email, projectId string) (string, error) {
 	claims := jwt.MapClaims{
 		"email":     email,
 		"projectId": projectId,
+		"iss":       j.Issuer,
+		"exp":       time.Now().Unix() + j.ExpirationInSeconds,
+		"iat":       time.Now().Unix(),
+		"sub":       email,
 	}
 	privateKey, err := parseRSAPrivateKey(j.PrivateKey)
 	if err != nil {
@@ -65,6 +74,10 @@ func (j *JWTSettings) VerifyToken(tokenString string) (*TokenClaims, error) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims["iss"] != j.Issuer {
 		return nil, errors.New("invalid token")
 	}
 

@@ -7,4 +7,7 @@ const (
 
 	OperationEmailVerification = "email_verification"
 	OperationPasswordReset     = "password_reset"
+
+	TokenExpirationInSeconds = 600
+	TokenIssuer              = "idiom:auth"
 )

@@ -25,9 +25,7 @@ type RegisterInput struct {
 	AvatarURL   string
 }
 
-func Login(ctx context.Context, email, password, projectID string) (bool, error) {
-	repo := &Repository{}
-
+func Login(ctx context.Context, repo *Repository, email, password, projectID string) (bool, error) {
 	identity, err := repo.GetIdentityByEmail(ctx, email, projectID)
 	if err != nil {
 		return false, err
@@ -44,14 +42,11 @@ func Login(ctx context.Context, email, password, projectID string) (bool, error)
 	return crypto.CheckPasswordHash(password, *identity.PasswordHash), nil
 }
 
-func VerifyEmail(ctx context.Context, email, projectID string) error {
-	repo := &Repository{}
+func VerifyEmail(ctx context.Context, repo *Repository, email, projectID string) error {
 	return repo.VerifyIdentityEmail(ctx, strings.ToLower(email), projectID)
 }
 
-func UpdatePassword(ctx context.Context, email, projectID, password string) error {
-	repo := &Repository{}
-
+func UpdatePassword(ctx context.Context, repo *Repository, email, projectID, password string) error {
 	hashedPassword, err := crypto.HashPassword(password)
 	if err != nil {
 		return err
@@ -60,9 +55,7 @@ func UpdatePassword(ctx context.Context, email, projectID, password string) erro
 	return repo.UpdatePassword(ctx, strings.ToLower(email), projectID, hashedPassword)
 }
 
-func Register(ctx context.Context, input RegisterInput) (*Identity, error) {
-	repo := &Repository{}
-
+func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Identity, error) {
 	hashedPassword, err := crypto.HashPassword(input.Password)
 
 	if err != nil {

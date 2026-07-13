@@ -9,6 +9,7 @@ import (
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
 	api "idiom-api-services/api/auth/routes"
+	"idiom-api-services/packages/database/postgres"
 	"idiom-api-services/packages/email"
 	"idiom-api-services/packages/jwt"
 	web "idiom-api-services/web/auth/routes"
@@ -16,8 +17,19 @@ import (
 
 func main() {
 	ctx := context.Background()
+	pg, err := postgres.Init(ctx, config.PostgresDSN)
+	if err != nil {
+		log.Fatalf("failed to initialize postgres: %v", err)
+	}
+	defer pg.Close()
+
 	appConfig := config.AppConfig{
-		JWTSettings: jwt.NewJWTSettings(config.JWTPrivateKey, config.JWTPublicKey),
+		JWTSettings: jwt.NewJWTSettings(
+			config.JWTPrivateKey,
+			config.JWTPublicKey,
+			config.TokenExpirationInSeconds,
+			config.TokenIssuer,
+		),
 		EmailSender: email.NewSMTPSender(email.SMTPConfig{
 			Host:     config.SMTPHost,
 			Port:     config.SMTPPort,
@@ -27,6 +39,7 @@ func main() {
 		}),
 		AuthBaseURL:        config.AuthBaseURL,
 		VerificationSecret: config.VerificationSecret,
+		PostgresDB:         pg,
 	}
 
 	authHandler := handlers.NewHandler(appConfig)

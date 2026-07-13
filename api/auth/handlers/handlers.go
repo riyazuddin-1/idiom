@@ -13,11 +13,13 @@ import (
 
 type Handler struct {
 	config config.AppConfig
+	repo   *identities.Repository
 }
 
 func NewHandler(config config.AppConfig) *Handler {
 	return &Handler{
 		config: config,
+		repo:   identities.NewRepository(config.PostgresDB),
 	}
 }
 
@@ -29,7 +31,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	ok, err := identities.Login(r.Context(), req.Email, req.Password, config.ProjectID)
+	ok, err := identities.Login(r.Context(), h.repo, req.Email, req.Password, config.ProjectID)
 	if err != nil || !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -77,7 +79,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	identity, err := identities.Register(r.Context(), identities.RegisterInput{
+	identity, err := identities.Register(r.Context(), h.repo, identities.RegisterInput{
 		Email:       req.Email,
 		Password:    req.Password,
 		ProjectID:   config.ProjectID,
@@ -139,7 +141,7 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := identities.VerifyEmail(r.Context(), payload.Email, payload.ProjectID); err != nil {
+	if err := identities.VerifyEmail(r.Context(), h.repo, payload.Email, payload.ProjectID); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "Failed to verify email",
@@ -200,7 +202,7 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := identities.UpdatePassword(r.Context(), payload.Email, payload.ProjectID, req.Password); err != nil {
+	if err := identities.UpdatePassword(r.Context(), h.repo, payload.Email, payload.ProjectID, req.Password); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "Failed to update password",

@@ -10,6 +10,10 @@ type Repository struct {
 	db *postgres.Postgres
 }
 
+func NewRepository(db *postgres.Postgres) *Repository {
+	return &Repository{db: db}
+}
+
 func (r *Repository) GetIdentityByEmail(ctx context.Context, email, projectID string) (*Identity, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT id, email, password_hash, project_id, email_verified
