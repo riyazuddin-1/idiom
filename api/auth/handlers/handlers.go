@@ -223,3 +223,8 @@ func (h *Handler) GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Implement logic to update current user information here
 }
+
+// OAuth
+func (h *Handler) GoogleOAuthURL(w http.ResponseWriter, r *http.Request) {
+	// Google OAuth Url Generation
+}
