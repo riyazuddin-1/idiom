@@ -57,10 +57,12 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// refreshToken = sessions.Start()
+
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Login successful",
-		"token":   token,
+		"message":     "Login successful",
+		"accessToken": token,
 		"user": map[string]string{
 			"email": req.Email,
 		},
@@ -224,7 +226,9 @@ func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Reques
 	// Implement logic to update current user information here
 }
 
-// OAuth
-func (h *Handler) GoogleOAuthURL(w http.ResponseWriter, r *http.Request) {
-	// Google OAuth Url Generation
+// Session management
+func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+
 }
+
+// OAuth

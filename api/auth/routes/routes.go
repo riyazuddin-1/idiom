@@ -68,12 +68,11 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		}
 	})
 
-	mux.HandleFunc("/oauth/google", func (w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/token/refresh", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
 		}
 
-		
+		handler.RefreshTokenHandler(w, r)
 	})
 }

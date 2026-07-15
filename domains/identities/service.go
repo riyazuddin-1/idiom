@@ -2,8 +2,6 @@ package identities
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"idiom-api-services/packages/crypto"
 	"strings"
 	"time"
@@ -69,7 +67,7 @@ func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Iden
 	}
 
 	identity := &Identity{
-		ID:             newIdentityID(),
+		ID:             crypto.GenerateID("idx", identityIDSize),
 		ProjectID:      input.ProjectID,
 		Email:          strings.ToLower(strings.TrimSpace(input.Email)),
 		EmailVerified:  false,
@@ -108,13 +106,4 @@ func buildDisplayName(firstName, lastName, email string) string {
 	}
 
 	return email
-}
-
-func newIdentityID() string {
-	bytes := make([]byte, identityIDSize)
-	if _, err := rand.Read(bytes); err != nil {
-		return "idn_" + hex.EncodeToString([]byte(time.Now().UTC().Format(time.RFC3339Nano)))
-	}
-
-	return "idn_" + hex.EncodeToString(bytes)
 }
