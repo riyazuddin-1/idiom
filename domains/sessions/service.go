@@ -31,3 +31,9 @@ func Start(ctx context.Context, repo *Repository, identityID string, ip string, 
 
 	return refresh_token, nil
 }
+
+func Refresh()
+
+func Revoke()
+
+func RevokeAll()
