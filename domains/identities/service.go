@@ -67,7 +67,7 @@ func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Iden
 	}
 
 	identity := &Identity{
-		ID:             crypto.GenerateID("idx", identityIDSize),
+		ID:             crypto.GenerateID("uid_"),
 		ProjectID:      input.ProjectID,
 		Email:          strings.ToLower(strings.TrimSpace(input.Email)),
 		EmailVerified:  false,

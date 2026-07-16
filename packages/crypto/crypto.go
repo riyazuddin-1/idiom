@@ -3,16 +3,17 @@ package crypto
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"strconv"
 	"time"
 )
 
-func GenerateID(prefix string, length int) string {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		return prefix + hex.EncodeToString([]byte(time.Now().UTC().Format(time.RFC3339Nano)))
-	}
+func GenerateID(prefix string) string {
+	timestamp := time.Now().UnixMilli()
 
-	return prefix + hex.EncodeToString(bytes)
+	// Converting timestamp to base16(hex)
+	hexStr := strconv.FormatInt(timestamp, 16)
+
+	return prefix + hexStr
 }
 
 func RandomString(length int) (string, error) {

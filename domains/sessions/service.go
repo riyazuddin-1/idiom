@@ -7,29 +7,32 @@ import (
 )
 
 func Start(ctx context.Context, repo *Repository, identityID string, ip string, userAgent string) (string, error) {
-	refresh_token, err := crypto.RandomString(32)
+	refreshToken, err := crypto.RandomString(32)
 	if err != nil {
 		return "", err
 	}
-	refresh_token_hash, err := crypto.HashString(refresh_token)
+	refreshTokenHash, err := crypto.HashString(refreshToken)
 
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
-	repo.Create(ctx, &Session{
-		ID:               crypto.GenerateID("session", 16),
+	now := time.Now().UTC()
+	if err := repo.Create(ctx, &Session{
+		ID:               crypto.GenerateID("sid_"),
 		IdentityID:       identityID,
-		RefreshTokenHash: refresh_token_hash,
+		RefreshTokenHash: refreshTokenHash,
 		IP:               ip,
 		UserAgent:        userAgent,
-		ExpiresAt:        time.Now().Add(30 * 24 * time.Hour),
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+		ExpiresAt:        now.Add(30 * 24 * time.Hour),
+		CreatedAt:        now,
+		UpdatedAt:        now,
 		RevokedAt:        nil,
-	})
+	}); err != nil {
+		return "", err
+	}
 
-	return refresh_token, nil
+	return refreshToken, nil
 }
 
 func Refresh()
