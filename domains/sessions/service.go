@@ -62,13 +62,34 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 	}, nil
 }
 
-func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, refreshToken string) {
+func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, refreshToken string) (*SessionTokens, error) {
+	session, newRefreshToken, err := repo.UpdateRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, err
+	}
 
+	accessToken, err := jwtSettings.CreateToken(jwt.CustomClaims{
+		"sid": session.ID,
+		"sub": session.IdentityID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &SessionTokens{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		SessionID:    session.ID,
+	}, nil
 }
 
-func Revoke() {}
+func Revoke(ctx context.Context, repo *Repository, sessionID string) (bool, error) {
+	return repo.RevokeSession(ctx, sessionID)
+}
 
-func RevokeAll() {}
+func RevokeAll(ctx context.Context, repo *Repository, identityID string) (int64, error) {
+	return repo.RevokeAllSessions(ctx, identityID)
+}
 
 func Validate(ctx context.Context, repo *Repository) {
 
