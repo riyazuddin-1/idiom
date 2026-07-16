@@ -6,20 +6,23 @@ import (
 	"idiom-api-services/api/auth/helpers"
 	"idiom-api-services/api/auth/middlewares"
 	"idiom-api-services/domains/identities"
+	"idiom-api-services/domains/sessions"
 	"idiom-api-services/packages/crypto"
 	"log"
 	"net/http"
 )
 
 type Handler struct {
-	config config.AppConfig
-	repo   *identities.Repository
+	config      config.AppConfig
+	repo        *identities.Repository
+	sessionRepo *sessions.Repository
 }
 
 func NewHandler(config config.AppConfig) *Handler {
 	return &Handler{
-		config: config,
-		repo:   identities.NewRepository(config.PostgresDB),
+		config:      config,
+		repo:        identities.NewRepository(config.PostgresDB),
+		sessionRepo: sessions.NewRepository(config.PostgresDB),
 	}
 }
 
@@ -31,7 +34,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	ok, err := identities.Login(r.Context(), h.repo, req.Email, req.Password, config.ProjectID)
+	identity, ok, err := identities.Login(r.Context(), h.repo, req.Email, req.Password)
 	if err != nil || !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -48,23 +51,29 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.config.JWTSettings.CreateToken(req.Email, config.ProjectID)
+	tokens, err := sessions.Start(
+		r.Context(),
+		h.sessionRepo,
+		h.config.JWTSettings,
+		identity,
+		r.RemoteAddr,
+		r.UserAgent(),
+	)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to create token",
+			"error": "Failed to start session",
 		})
 		return
 	}
 
-	// refreshToken = sessions.Start()
-
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":     "Login successful",
-		"accessToken": token,
+		"message":      "Login successful",
+		"accessToken":  tokens.AccessToken,
+		"refreshToken": tokens.RefreshToken,
 		"user": map[string]string{
-			"email": req.Email,
+			"email": identity.Email,
 		},
 	})
 }
@@ -84,7 +93,6 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	identity, err := identities.Register(r.Context(), h.repo, identities.RegisterInput{
 		Email:       req.Email,
 		Password:    req.Password,
-		ProjectID:   config.ProjectID,
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		DisplayName: req.DisplayName,
@@ -143,7 +151,7 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := identities.VerifyEmail(r.Context(), h.repo, payload.Email, payload.ProjectID); err != nil {
+	if err := identities.VerifyEmail(r.Context(), h.repo, payload.Email); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "Failed to verify email",
@@ -164,7 +172,7 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, req.Email, config.ProjectID); err != nil {
+	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, req.Email); err != nil {
 		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -204,7 +212,7 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := identities.UpdatePassword(r.Context(), h.repo, payload.Email, payload.ProjectID, req.Password); err != nil {
+	if err := identities.UpdatePassword(r.Context(), h.repo, payload.Email, req.Password); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": "Failed to update password",

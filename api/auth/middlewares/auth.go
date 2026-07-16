@@ -14,8 +14,7 @@ type contextKey string
 const authUserContextKey contextKey = "auth_user"
 
 type AuthUser struct {
-	Email     string
-	ProjectID string
+	Email string
 }
 
 func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
@@ -38,8 +37,7 @@ func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *htt
 	}
 
 	user := &AuthUser{
-		Email:     claims.Email,
-		ProjectID: claims.ProjectID,
+		Email: claims.Email,
 	}
 
 	return r.WithContext(ContextWithUser(r.Context(), user)), nil

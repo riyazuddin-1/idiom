@@ -10,6 +10,10 @@ type Repository struct {
 	db *postgres.Postgres
 }
 
+func NewRepository(db *postgres.Postgres) *Repository {
+	return &Repository{db: db}
+}
+
 func (r *Repository) GetByRefreshToken(ctx context.Context, refreshToken string) (*Session, error) {
 	refreshTokenHash, err := crypto.HashString(refreshToken)
 	if err != nil {

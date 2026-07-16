@@ -16,41 +16,44 @@ const (
 type RegisterInput struct {
 	Email       string
 	Password    string
-	ProjectID   string
 	FirstName   string
 	LastName    string
 	DisplayName string
 	AvatarURL   string
 }
 
-func Login(ctx context.Context, repo *Repository, email, password, projectID string) (bool, error) {
-	identity, err := repo.GetIdentityByEmail(ctx, email, projectID)
+func Login(ctx context.Context, repo *Repository, email, password string) (*Identity, bool, error) {
+	identity, err := repo.GetIdentityByEmail(ctx, email)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 
 	if identity.PasswordHash == nil {
-		return false, nil
+		return nil, false, nil
 	}
 
 	if !identity.EmailVerified {
-		return false, nil
+		return nil, false, nil
 	}
 
-	return crypto.CheckPasswordHash(password, *identity.PasswordHash), nil
+	if !crypto.CheckPasswordHash(password, *identity.PasswordHash) {
+		return nil, false, nil
+	}
+
+	return identity, true, nil
 }
 
-func VerifyEmail(ctx context.Context, repo *Repository, email, projectID string) error {
-	return repo.VerifyIdentityEmail(ctx, strings.ToLower(email), projectID)
+func VerifyEmail(ctx context.Context, repo *Repository, email string) error {
+	return repo.VerifyIdentityEmail(ctx, strings.ToLower(email))
 }
 
-func UpdatePassword(ctx context.Context, repo *Repository, email, projectID, password string) error {
+func UpdatePassword(ctx context.Context, repo *Repository, email, password string) error {
 	hashedPassword, err := crypto.HashPassword(password)
 	if err != nil {
 		return err
 	}
 
-	return repo.UpdatePassword(ctx, strings.ToLower(email), projectID, hashedPassword)
+	return repo.UpdatePassword(ctx, strings.ToLower(email), hashedPassword)
 }
 
 func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Identity, error) {
@@ -68,7 +71,6 @@ func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Iden
 
 	identity := &Identity{
 		ID:             crypto.GenerateID("uid_"),
-		ProjectID:      input.ProjectID,
 		Email:          strings.ToLower(strings.TrimSpace(input.Email)),
 		EmailVerified:  false,
 		FirstName:      strings.TrimSpace(input.FirstName),

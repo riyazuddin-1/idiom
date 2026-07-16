@@ -2,25 +2,42 @@ package sessions
 
 import (
 	"context"
+	"idiom-api-services/domains/identities"
 	"idiom-api-services/packages/crypto"
+	"idiom-api-services/packages/jwt"
 	"time"
 )
 
-func Start(ctx context.Context, repo *Repository, identityID string, ip string, userAgent string) (string, error) {
-	refreshToken, err := crypto.RandomString(32)
+const (
+	refreshTokenLength = 32
+)
+
+type StartResult struct {
+	AccessToken  string
+	RefreshToken string
+	SessionID    string
+}
+
+func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*StartResult, error) {
+	accessToken, err := jwtSettings.CreateToken(identity.Email)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+
+	refreshToken, err := crypto.RandomString(refreshTokenLength)
+	if err != nil {
+		return nil, err
 	}
 	refreshTokenHash, err := crypto.HashString(refreshToken)
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	now := time.Now().UTC()
-	if err := repo.Create(ctx, &Session{
+	session := &Session{
 		ID:               crypto.GenerateID("sid_"),
-		IdentityID:       identityID,
+		IdentityID:       identity.ID,
 		RefreshTokenHash: refreshTokenHash,
 		IP:               ip,
 		UserAgent:        userAgent,
@@ -28,15 +45,21 @@ func Start(ctx context.Context, repo *Repository, identityID string, ip string, 
 		CreatedAt:        now,
 		UpdatedAt:        now,
 		RevokedAt:        nil,
-	}); err != nil {
-		return "", err
 	}
 
-	return refreshToken, nil
+	if err := repo.Create(ctx, session); err != nil {
+		return nil, err
+	}
+
+	return &StartResult{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		SessionID:    session.ID,
+	}, nil
 }
 
-func Refresh()
+func Refresh() {}
 
-func Revoke()
+func Revoke() {}
 
-func RevokeAll()
+func RevokeAll() {}

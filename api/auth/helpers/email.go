@@ -12,14 +12,12 @@ import (
 
 type Scope struct {
 	Operation string `json:"operation"`
-	ProjectID string `json:"project_id"`
 	Email     string `json:"email"`
 }
 
 func SendVerificationEmail(ctx context.Context, appConfig config.AppConfig, identity *identities.Identity) error {
 	scope, err := crypto.EncryptJSON(Scope{
 		Operation: config.OperationEmailVerification,
-		ProjectID: identity.ProjectID,
 		Email:     identity.Email,
 	}, appConfig.VerificationSecret)
 	if err != nil {
@@ -35,10 +33,9 @@ func SendVerificationEmail(ctx context.Context, appConfig config.AppConfig, iden
 	})
 }
 
-func SendPasswordResetEmail(ctx context.Context, appConfig config.AppConfig, emailAddress, projectID string) error {
+func SendPasswordResetEmail(ctx context.Context, appConfig config.AppConfig, emailAddress string) error {
 	scope, err := crypto.EncryptJSON(Scope{
 		Operation: config.OperationPasswordReset,
-		ProjectID: projectID,
 		Email:     emailAddress,
 	}, appConfig.VerificationSecret)
 	if err != nil {

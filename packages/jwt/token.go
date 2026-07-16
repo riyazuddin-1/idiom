@@ -19,8 +19,7 @@ type JWTSettings struct {
 }
 
 type TokenClaims struct {
-	Email     string
-	ProjectID string
+	Email string
 }
 
 func NewJWTSettings(privateKey, publicKey string, expiration int64, issuer string) *JWTSettings {
@@ -32,14 +31,13 @@ func NewJWTSettings(privateKey, publicKey string, expiration int64, issuer strin
 	}
 }
 
-func (j *JWTSettings) CreateToken(email, projectId string) (string, error) {
+func (j *JWTSettings) CreateToken(email string) (string, error) {
 	claims := jwt.MapClaims{
-		"email":     email,
-		"projectId": projectId,
-		"iss":       j.Issuer,
-		"exp":       time.Now().Unix() + j.ExpirationInSeconds,
-		"iat":       time.Now().Unix(),
-		"sub":       email,
+		"email": email,
+		"iss":   j.Issuer,
+		"exp":   time.Now().Unix() + j.ExpirationInSeconds,
+		"iat":   time.Now().Unix(),
+		"sub":   email,
 	}
 	privateKey, err := parseRSAPrivateKey(j.PrivateKey)
 	if err != nil {
@@ -82,11 +80,9 @@ func (j *JWTSettings) VerifyToken(tokenString string) (*TokenClaims, error) {
 	}
 
 	email, _ := claims["email"].(string)
-	projectID, _ := claims["projectId"].(string)
 
 	return &TokenClaims{
-		Email:     email,
-		ProjectID: projectID,
+		Email: email,
 	}, nil
 }
 
