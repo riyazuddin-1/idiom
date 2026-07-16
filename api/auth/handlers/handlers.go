@@ -10,6 +10,7 @@ import (
 	"idiom-api-services/packages/crypto"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Handler struct {
@@ -70,7 +71,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
-		Path:     "/",
+		Path:     "/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
@@ -87,7 +88,42 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Implement logout logic here
+	w.Header().Set("Content-Type", "application/json")
+
+	user, ok := middlewares.UserFromContext(r.Context())
+
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	revoked, err := sessions.Revoke(r.Context(), h.sessionRepo, user.SessionID)
+
+	if err != nil || !revoked {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to logout",
+		})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/token/refresh",
+		HttpOnly: true,
+		Secure:   true,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+	})
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"message": "Logout successful",
+	})
 }
 
 func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -244,11 +280,13 @@ func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Reques
 
 // Session management
 func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	refreshToken, err := r.Cookie("refresh_token")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"message": "Refresh token not found",
+			"error": "Refresh token not found",
 		})
 		return
 	}
@@ -258,7 +296,7 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"message": "Invalid refresh token",
+			"error": "Invalid refresh token",
 		})
 		return
 	}
@@ -266,7 +304,7 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
-		Path:     "/",
+		Path:     "/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
@@ -274,7 +312,7 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":     "Token refreshed successful",
+		"message":     "Token refreshed successfully",
 		"accessToken": tokens.AccessToken,
 	})
 }

@@ -22,6 +22,12 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
+
+		r, err := middlewares.VerifyUserToken(appConfig.JWTSettings, w, r)
+		if err != nil {
+			return
+		}
+
 		handler.LogoutHandler(w, r)
 	})
 

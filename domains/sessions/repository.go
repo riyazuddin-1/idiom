@@ -141,6 +141,7 @@ func (r *Repository) UpdateRefreshToken(ctx context.Context, refreshToken string
 			updated_at = NOW()
 		WHERE refresh_token_hash = $1
 			AND revoked_at IS NULL
+			AND expires_at > NOW()
 		RETURNING
 			id,
 			identity_id,
