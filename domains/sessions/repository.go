@@ -14,6 +14,41 @@ func NewRepository(db *postgres.Postgres) *Repository {
 	return &Repository{db: db}
 }
 
+func (r *Repository) GetBySessionID(ctx context.Context, sessionID string) (*Session, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT
+			id,
+			identity_id,
+			refresh_token_hash,
+			ip_address,
+			user_agent,
+			expires_at,
+			created_at,
+			updated_at,
+			revoked_at
+		FROM sessions
+		WHERE id = $1
+	`, sessionID)
+
+	var session Session
+
+	if err := row.Scan(
+		&session.ID,
+		&session.IdentityID,
+		&session.RefreshTokenHash,
+		&session.IP,
+		&session.UserAgent,
+		&session.ExpiresAt,
+		&session.CreatedAt,
+		&session.UpdatedAt,
+		&session.RevokedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
 func (r *Repository) GetByRefreshToken(ctx context.Context, refreshToken string) (*Session, error) {
 	refreshTokenHash, err := crypto.HashString(refreshToken)
 	if err != nil {

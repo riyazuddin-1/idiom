@@ -18,8 +18,13 @@ type JWTSettings struct {
 	Issuer              string
 }
 
-type TokenClaims struct {
-	Email string
+type CustomClaims map[string]interface{}
+
+type TokenClaims map[string]interface{}
+
+func (c TokenClaims) String(key string) string {
+	value, _ := c[key].(string)
+	return value
 }
 
 func NewJWTSettings(privateKey, publicKey string, expiration int64, issuer string) *JWTSettings {
@@ -31,14 +36,19 @@ func NewJWTSettings(privateKey, publicKey string, expiration int64, issuer strin
 	}
 }
 
-func (j *JWTSettings) CreateToken(email string) (string, error) {
+func (j *JWTSettings) CreateToken(customClaims CustomClaims) (string, error) {
+	now := time.Now().Unix()
+
 	claims := jwt.MapClaims{
-		"email": email,
-		"iss":   j.Issuer,
-		"exp":   time.Now().Unix() + j.ExpirationInSeconds,
-		"iat":   time.Now().Unix(),
-		"sub":   email,
+		"iss": j.Issuer,
+		"exp": now + j.ExpirationInSeconds,
+		"iat": now,
 	}
+
+	for key, value := range customClaims {
+		claims[key] = value
+	}
+
 	privateKey, err := parseRSAPrivateKey(j.PrivateKey)
 	if err != nil {
 		return "", err
@@ -79,11 +89,8 @@ func (j *JWTSettings) VerifyToken(tokenString string) (*TokenClaims, error) {
 		return nil, errors.New("invalid token")
 	}
 
-	email, _ := claims["email"].(string)
-
-	return &TokenClaims{
-		Email: email,
-	}, nil
+	tokenClaims := TokenClaims(claims)
+	return &tokenClaims, nil
 }
 
 func parseRSAPrivateKey(value string) (*rsa.PrivateKey, error) {

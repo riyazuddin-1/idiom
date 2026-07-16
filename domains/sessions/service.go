@@ -19,7 +19,11 @@ type SessionTokens struct {
 }
 
 func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*SessionTokens, error) {
-	accessToken, err := jwtSettings.CreateToken(identity.Email)
+	sessionID := crypto.GenerateID("sid_")
+	accessToken, err := jwtSettings.CreateToken(jwt.CustomClaims{
+		"sid": sessionID,
+		"sub": identity.ID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +40,7 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 
 	now := time.Now().UTC()
 	session := &Session{
-		ID:               crypto.GenerateID("sid_"),
+		ID:               sessionID,
 		IdentityID:       identity.ID,
 		RefreshTokenHash: refreshTokenHash,
 		IP:               ip,
@@ -58,8 +62,14 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 	}, nil
 }
 
-func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, sessionID string) {}
+func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, refreshToken string) {
+
+}
 
 func Revoke() {}
 
 func RevokeAll() {}
+
+func Validate(ctx context.Context, repo *Repository) {
+
+}
