@@ -67,11 +67,19 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":      "Login successful",
-		"accessToken":  tokens.AccessToken,
-		"refreshToken": tokens.RefreshToken,
+		"message":     "Login successful",
+		"accessToken": tokens.AccessToken,
 		"user": map[string]string{
 			"email": identity.Email,
 		},
@@ -236,7 +244,39 @@ func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Reques
 
 // Session management
 func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := r.Cookie("refresh_token")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"message": "Refresh token not found",
+		})
+		return
+	}
 
+	tokens, err := sessions.Refresh(r.Context(), h.sessionRepo, h.config.JWTSettings, refreshToken.Value)
+
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"message": "Invalid refresh token",
+		})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":     "Token refreshed successful",
+		"accessToken": tokens.AccessToken,
+	})
 }
 
 // OAuth

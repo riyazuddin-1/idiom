@@ -69,8 +69,9 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 	})
 
 	mux.HandleFunc("/token/refresh", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
 		}
 
 		handler.RefreshTokenHandler(w, r)
