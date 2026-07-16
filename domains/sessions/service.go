@@ -12,13 +12,13 @@ const (
 	refreshTokenLength = 32
 )
 
-type StartResult struct {
+type SessionTokens struct {
 	AccessToken  string
 	RefreshToken string
 	SessionID    string
 }
 
-func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*StartResult, error) {
+func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*SessionTokens, error) {
 	accessToken, err := jwtSettings.CreateToken(identity.Email)
 	if err != nil {
 		return nil, err
@@ -51,14 +51,14 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 		return nil, err
 	}
 
-	return &StartResult{
+	return &SessionTokens{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		SessionID:    session.ID,
 	}, nil
 }
 
-func Refresh() {}
+func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, sessionID string) {}
 
 func Revoke() {}
 
