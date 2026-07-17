@@ -10,7 +10,7 @@ import (
 )
 
 func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppConfig) {
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/{project_id}/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
@@ -32,7 +32,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		handler.LogoutHandler(w, r)
 	})
 
-	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/{project_id}/register", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
@@ -48,7 +48,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		handler.VerifyHandler(w, r)
 	})
 
-	mux.HandleFunc("/password-reset", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/{project_id}/password-reset", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handler.SendPasswordResetHandler(w, r)

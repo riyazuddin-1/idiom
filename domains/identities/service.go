@@ -7,6 +7,7 @@ import (
 )
 
 type RegisterInput struct {
+	ProjectID   string
 	Email       string
 	Password    string
 	FirstName   string
@@ -15,8 +16,8 @@ type RegisterInput struct {
 	AvatarURL   string
 }
 
-func Login(ctx context.Context, repo *Repository, email, password string) (*Identity, bool, error) {
-	identity, err := repo.GetIdentityByEmail(ctx, email)
+func Login(ctx context.Context, repo *Repository, projectID, email, password string) (*Identity, bool, error) {
+	identity, err := repo.GetIdentityByEmail(ctx, projectID, email)
 	if err != nil {
 		return nil, false, err
 	}
@@ -36,17 +37,17 @@ func Login(ctx context.Context, repo *Repository, email, password string) (*Iden
 	return identity, true, nil
 }
 
-func VerifyEmail(ctx context.Context, repo *Repository, email string) error {
-	return repo.VerifyIdentityEmail(ctx, strings.ToLower(email))
+func VerifyEmail(ctx context.Context, repo *Repository, projectID, email string) error {
+	return repo.VerifyIdentityEmail(ctx, projectID, strings.ToLower(email))
 }
 
-func UpdatePassword(ctx context.Context, repo *Repository, email, password string) error {
+func UpdatePassword(ctx context.Context, repo *Repository, projectID, email, password string) error {
 	hashedPassword, err := crypto.HashPassword(password)
 	if err != nil {
 		return err
 	}
 
-	return repo.UpdatePassword(ctx, strings.ToLower(email), hashedPassword)
+	return repo.UpdatePassword(ctx, projectID, strings.ToLower(email), hashedPassword)
 }
 
 func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Identity, error) {
@@ -63,6 +64,7 @@ func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Iden
 
 	identity := &Identity{
 		ID:            crypto.GenerateID("uid_"),
+		ProjectID:     input.ProjectID,
 		Email:         strings.ToLower(strings.TrimSpace(input.Email)),
 		EmailVerified: true,
 		FirstName:     strings.TrimSpace(input.FirstName),

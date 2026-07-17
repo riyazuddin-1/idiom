@@ -23,6 +23,7 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 	accessToken, err := jwtSettings.CreateToken(jwt.CustomClaims{
 		"sid": sessionID,
 		"sub": identity.ID,
+		"pid": identity.ProjectID,
 	})
 	if err != nil {
 		return nil, err
@@ -60,7 +61,7 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 }
 
 func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, refreshToken string) (*SessionTokens, error) {
-	session, newRefreshToken, err := repo.UpdateRefreshToken(ctx, refreshToken)
+	session, newRefreshToken, projectID, err := repo.UpdateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +69,7 @@ func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings
 	accessToken, err := jwtSettings.CreateToken(jwt.CustomClaims{
 		"sid": session.ID,
 		"sub": session.IdentityID,
+		"pid": projectID,
 	})
 	if err != nil {
 		return nil, err

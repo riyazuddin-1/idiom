@@ -50,45 +50,6 @@ func (r *Repository) GetBySessionID(ctx context.Context, sessionID string) (*Ses
 	return &session, nil
 }
 
-func (r *Repository) GetByRefreshToken(ctx context.Context, refreshToken string) (*Session, error) {
-	refreshTokenHash, err := crypto.HashString(refreshToken)
-	if err != nil {
-		return nil, err
-	}
-	row := r.db.QueryRow(ctx, `
-		SELECT
-			id,
-			identity_id,
-			refresh_token_hash,
-			ip_address,
-			user_agent,
-			expires_at,
-			created_at,
-			updated_at,
-			revoked_at
-		FROM sessions
-		WHERE refresh_token_hash = $1
-	`, refreshTokenHash)
-
-	var session Session
-
-	if err := row.Scan(
-		&session.ID,
-		&session.IdentityID,
-		&session.RefreshTokenHash,
-		&session.IP,
-		&session.UserAgent,
-		&session.ExpiresAt,
-		&session.CreatedAt,
-		&session.UpdatedAt,
-		&session.RevokedAt,
-	); err != nil {
-		return nil, err
-	}
-
-	return &session, nil
-}
-
 func (r *Repository) Create(ctx context.Context, session *Session) error {
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO sessions (
@@ -113,42 +74,46 @@ func (r *Repository) Create(ctx context.Context, session *Session) error {
 	return err
 }
 
-func (r *Repository) UpdateRefreshToken(ctx context.Context, refreshToken string) (*Session, string, error) {
+func (r *Repository) UpdateRefreshToken(ctx context.Context, refreshToken string) (*Session, string, string, error) {
 	refreshTokenHash, err := crypto.HashString(refreshToken)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	newRefreshToken, err := crypto.RandomString(refreshTokenLength)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	newRefreshTokenHash, err := crypto.HashString(newRefreshToken)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	row := r.db.QueryRow(ctx, `
 		UPDATE sessions
 		SET refresh_token_hash = $2,
 			updated_at = NOW()
-		WHERE refresh_token_hash = $1
-			AND revoked_at IS NULL
-			AND expires_at > NOW()
+		FROM identities
+		WHERE sessions.identity_id = identities.id
+			AND sessions.refresh_token_hash = $1
+			AND sessions.revoked_at IS NULL
+			AND sessions.expires_at > NOW()
 		RETURNING
-			id,
-			identity_id,
-			refresh_token_hash,
-			ip_address,
-			user_agent,
-			expires_at,
-			created_at,
-			updated_at,
-			revoked_at
+			sessions.id,
+			sessions.identity_id,
+			sessions.refresh_token_hash,
+			sessions.ip_address,
+			sessions.user_agent,
+			sessions.expires_at,
+			sessions.created_at,
+			sessions.updated_at,
+			sessions.revoked_at,
+			identities.project_id
 	`, refreshTokenHash, newRefreshTokenHash)
 
 	var session Session
+	var projectID string
 	if err := row.Scan(
 		&session.ID,
 		&session.IdentityID,
@@ -159,11 +124,12 @@ func (r *Repository) UpdateRefreshToken(ctx context.Context, refreshToken string
 		&session.CreatedAt,
 		&session.UpdatedAt,
 		&session.RevokedAt,
+		&projectID,
 	); err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
-	return &session, newRefreshToken, nil
+	return &session, newRefreshToken, projectID, nil
 }
 
 func (r *Repository) RevokeSession(ctx context.Context, sessionID string) (bool, error) {

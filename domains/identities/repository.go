@@ -14,16 +14,17 @@ func NewRepository(db *postgres.Postgres) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetIdentityByEmail(ctx context.Context, email string) (*Identity, error) {
+func (r *Repository) GetIdentityByEmail(ctx context.Context, projectID, email string) (*Identity, error) {
 	row := r.db.QueryRow(ctx, `
-		SELECT id, email, password_hash, email_verified
+		SELECT id, project_id, email, password_hash, email_verified
 		FROM identities
-		WHERE email = $1
-	`, email)
+		WHERE project_id = $1
+			AND email = $2
+	`, projectID, email)
 
 	var identity Identity
 	var passwordHash string
-	if err := row.Scan(&identity.ID, &identity.Email, &passwordHash, &identity.EmailVerified); err != nil {
+	if err := row.Scan(&identity.ID, &identity.ProjectID, &identity.Email, &passwordHash, &identity.EmailVerified); err != nil {
 		return nil, err
 	}
 
@@ -31,13 +32,14 @@ func (r *Repository) GetIdentityByEmail(ctx context.Context, email string) (*Ide
 	return &identity, nil
 }
 
-func (r *Repository) VerifyIdentityEmail(ctx context.Context, email string) error {
+func (r *Repository) VerifyIdentityEmail(ctx context.Context, projectID, email string) error {
 	result, err := r.db.Exec(ctx, `
 		UPDATE identities
 		SET email_verified = true,
 			updated_at = NOW()
-		WHERE email = $1
-	`, email)
+		WHERE project_id = $1
+			AND email = $2
+	`, projectID, email)
 	if err != nil {
 		return err
 	}
@@ -47,13 +49,14 @@ func (r *Repository) VerifyIdentityEmail(ctx context.Context, email string) erro
 	return nil
 }
 
-func (r *Repository) UpdatePassword(ctx context.Context, email, passwordHash string) error {
+func (r *Repository) UpdatePassword(ctx context.Context, projectID, email, passwordHash string) error {
 	result, err := r.db.Exec(ctx, `
 		UPDATE identities
-		SET password_hash = $2,
+		SET password_hash = $3,
 			updated_at = NOW()
-		WHERE email = $1
-	`, email, passwordHash)
+		WHERE project_id = $1
+			AND email = $2
+	`, projectID, email, passwordHash)
 	if err != nil {
 		return err
 	}
@@ -67,6 +70,7 @@ func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) err
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO identities (
 			id,
+			project_id,
 			email,
 			email_verified,
 			first_name,
@@ -76,10 +80,12 @@ func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) err
 			password_hash
 		) VALUES (
 			$1, $2, $3, $4,
-			$5, $6, $7, $8
+			$5, $6, $7, $8,
+			$9
 		)
 	`,
 		identity.ID,
+		identity.ProjectID,
 		identity.Email,
 		identity.EmailVerified,
 		identity.FirstName,

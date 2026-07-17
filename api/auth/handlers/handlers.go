@@ -5,6 +5,7 @@ import (
 	"idiom-api-services/api/auth/helpers"
 	"idiom-api-services/api/auth/middlewares"
 	"idiom-api-services/domains/identities"
+	"idiom-api-services/domains/projects"
 	"idiom-api-services/domains/sessions"
 	"idiom-api-services/packages/crypto"
 	response "idiom-api-services/packages/responses"
@@ -17,6 +18,7 @@ type Handler struct {
 	config      config.AppConfig
 	repo        *identities.Repository
 	sessionRepo *sessions.Repository
+	projectRepo *projects.Repository
 }
 
 func NewHandler(config config.AppConfig) *Handler {
@@ -24,16 +26,29 @@ func NewHandler(config config.AppConfig) *Handler {
 		config:      config,
 		repo:        identities.NewRepository(config.PostgresDB),
 		sessionRepo: sessions.NewRepository(config.PostgresDB),
+		projectRepo: projects.NewRepository(config.PostgresDB),
 	}
 }
 
 func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	if err != nil {
+		return
+	}
+
 	req, err := middlewares.ValidateLoginRequest(w, r)
 	if err != nil {
 		return
 	}
 
-	identity, ok, err := identities.Login(r.Context(), h.repo, req.Email, req.Password)
+	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusInternalServerError, "Project is not configured")
+		return
+	}
+
+	identity, ok, err := identities.Login(r.Context(), h.repo, projectID, req.Email, req.Password)
 	if err != nil || !ok {
 		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
@@ -60,7 +75,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
-		Path:     "/token/refresh",
+		Path:     "/api/v1/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
@@ -93,7 +108,7 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
-		Path:     "/token/refresh",
+		Path:     "/api/v1/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
 		MaxAge:   -1,
@@ -104,12 +119,25 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	if err != nil {
+		return
+	}
+
 	req, err := middlewares.ValidateRegisterRequest(w, r)
 	if err != nil {
 		return
 	}
 
+	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusInternalServerError, "Project is not configured")
+		return
+	}
+
 	identity, err := identities.Register(r.Context(), h.repo, identities.RegisterInput{
+		ProjectID:   projectID,
 		Email:       req.Email,
 		Password:    req.Password,
 		FirstName:   req.FirstName,
@@ -153,7 +181,12 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := identities.VerifyEmail(r.Context(), h.repo, payload.Email); err != nil {
+	if payload.ProjectID == "" {
+		response.Error(w, http.StatusBadRequest, "Invalid verification scope")
+		return
+	}
+
+	if err := identities.VerifyEmail(r.Context(), h.repo, payload.ProjectID, payload.Email); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to verify email")
 		return
 	}
@@ -162,12 +195,24 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	if err != nil {
+		return
+	}
+
 	req, err := middlewares.ValidatePasswordResetEmailRequest(w, r)
 	if err != nil {
 		return
 	}
 
-	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, req.Email); err != nil {
+	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusInternalServerError, "Project is not configured")
+		return
+	}
+
+	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, projectID, req.Email); err != nil {
 		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to send password reset email")
 		return
@@ -177,6 +222,12 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	if err != nil {
+		return
+	}
+
 	req, err := middlewares.ValidatePasswordResetRequest(w, r)
 	if err != nil {
 		return
@@ -193,7 +244,13 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := identities.UpdatePassword(r.Context(), h.repo, payload.Email, req.Password); err != nil {
+	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	if !ok || payload.ProjectID != projectID {
+		response.Error(w, http.StatusBadRequest, "Invalid password reset scope")
+		return
+	}
+
+	if err := identities.UpdatePassword(r.Context(), h.repo, projectID, payload.Email, req.Password); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to update password")
 		return
 	}
@@ -220,6 +277,15 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	tokens, err := sessions.Refresh(r.Context(), h.sessionRepo, h.config.JWTSettings, refreshToken.Value)
 
 	if err != nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    "",
+			Path:     "/api/v1/token/refresh",
+			HttpOnly: true,
+			Secure:   true,
+			MaxAge:   -1,
+			Expires:  time.Unix(0, 0),
+		})
 		response.Error(w, http.StatusUnauthorized, "Invalid refresh token")
 		return
 	}
@@ -227,7 +293,7 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
-		Path:     "/token/refresh",
+		Path:     "/api/v1/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,

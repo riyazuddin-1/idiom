@@ -54,7 +54,7 @@ func main() {
 
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
 	mux.Handle("/auth/v1/", http.StripPrefix("/auth/v1", apiMux))
-	mux.Handle("/web/", http.StripPrefix("/web", webMux))
+	mux.Handle("/", webMux)
 
 	server := &http.Server{
 		Addr:    ":8080",

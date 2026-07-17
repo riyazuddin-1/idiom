@@ -143,7 +143,7 @@
             <h1>Create account</h1>
             <p>Start using Idiom with your profile details.</p>
         </div>
-        <form class="auth-form" action="/api/v1/register" method="POST">
+        <form class="auth-form" action="/api/v1/{{.ProjectID}}/register" method="POST">
             <div class="field-row">
                 <div class="field">
                     <label for="first_name">First name</label>
@@ -178,7 +178,7 @@
             <button type="submit">Create account</button>
         </form>
         <div class="auth-footer">
-            Already have an account? <a href="/web/login">Log in</a>
+            Already have an account? <a href="/{{.ProjectID}}/login">Log in</a>
         </div>
     </div>
     <script>

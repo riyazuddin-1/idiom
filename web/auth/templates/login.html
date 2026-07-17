@@ -120,7 +120,7 @@
             <h1>Welcome back</h1>
             <p>Sign in to continue to Idiom.</p>
         </div>
-        <form class="auth-form" action="/api/v1/login" method="POST">
+        <form class="auth-form" action="/api/v1/{{.ProjectID}}/login" method="POST">
             <div class="field">
                 <label for="email">Email</label>
                 <input id="email" type="email" name="email" placeholder="user@example.com" autocomplete="email" required>
@@ -132,7 +132,7 @@
             <button type="submit">Log in</button>
         </form>
         <div class="auth-footer">
-            No account yet? <a href="/web/register">Create one</a>
+            No account yet? <a href="/{{.ProjectID}}/register">Create one</a>
         </div>
     </div>
 </body>
