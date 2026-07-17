@@ -46,9 +46,6 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 		IP:               ip,
 		UserAgent:        userAgent,
 		ExpiresAt:        now.Add(30 * 24 * time.Hour),
-		CreatedAt:        now,
-		UpdatedAt:        now,
-		RevokedAt:        nil,
 	}
 
 	if err := repo.Create(ctx, session); err != nil {

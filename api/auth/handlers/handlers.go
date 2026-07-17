@@ -122,14 +122,15 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := helpers.SendVerificationEmail(r.Context(), h.config, identity); err != nil {
-		log.Printf("failed to send verification email to %s: %v", identity.Email, err)
-		response.Error(w, http.StatusInternalServerError, "Failed to send verification email")
-		return
-	}
+	// Temporarily disabled until production email delivery is configured.
+	// if err := helpers.SendVerificationEmail(r.Context(), h.config, identity); err != nil {
+	// 	log.Printf("failed to send verification email to %s: %v", identity.Email, err)
+	// 	response.Error(w, http.StatusInternalServerError, "Failed to send verification email")
+	// 	return
+	// }
 
 	response.JSON(w, http.StatusCreated, map[string]interface{}{
-		"message": "User registered successfully. Please verify your email.",
+		"message": "User registered successfully.",
 		"user":    identity,
 	})
 }

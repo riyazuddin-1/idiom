@@ -73,17 +73,10 @@ func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) err
 			last_name,
 			display_name,
 			avatar_url,
-			password_hash,
-			provider,
-			provider_user_id,
-			status,
-			created_at,
-			updated_at,
-			last_login_at
+			password_hash
 		) VALUES (
-			$1, $2, $3, $4, $5,
-			$6, $7, $8, $9, $10,
-			$11, $12, $13, $14
+			$1, $2, $3, $4,
+			$5, $6, $7, $8
 		)
 	`,
 		identity.ID,
@@ -94,12 +87,6 @@ func (r *Repository) CreateIdentity(ctx context.Context, identity *Identity) err
 		identity.DisplayName,
 		identity.AvatarURL,
 		*identity.PasswordHash,
-		identity.Provider,
-		identity.ProviderUserID,
-		identity.Status,
-		identity.CreatedAt,
-		identity.UpdatedAt,
-		identity.LastLoginAt,
 	)
 	return err
 }

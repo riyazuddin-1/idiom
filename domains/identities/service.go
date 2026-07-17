@@ -4,13 +4,6 @@ import (
 	"context"
 	"idiom-api-services/packages/crypto"
 	"strings"
-	"time"
-)
-
-const (
-	ProviderEmail  = "email"
-	StatusActive   = "active"
-	identityIDSize = 16
 )
 
 type RegisterInput struct {
@@ -63,27 +56,20 @@ func Register(ctx context.Context, repo *Repository, input RegisterInput) (*Iden
 		return nil, err
 	}
 
-	now := time.Now().UTC()
 	displayName := strings.TrimSpace(input.DisplayName)
 	if displayName == "" {
 		displayName = buildDisplayName(input.FirstName, input.LastName, input.Email)
 	}
 
 	identity := &Identity{
-		ID:             crypto.GenerateID("uid_"),
-		Email:          strings.ToLower(strings.TrimSpace(input.Email)),
-		EmailVerified:  false,
-		FirstName:      strings.TrimSpace(input.FirstName),
-		LastName:       strings.TrimSpace(input.LastName),
-		DisplayName:    displayName,
-		AvatarURL:      strings.TrimSpace(input.AvatarURL),
-		PasswordHash:   &hashedPassword,
-		Provider:       ProviderEmail,
-		ProviderUserID: "",
-		Status:         StatusActive,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-		LastLoginAt:    nil,
+		ID:            crypto.GenerateID("uid_"),
+		Email:         strings.ToLower(strings.TrimSpace(input.Email)),
+		EmailVerified: true,
+		FirstName:     strings.TrimSpace(input.FirstName),
+		LastName:      strings.TrimSpace(input.LastName),
+		DisplayName:   displayName,
+		AvatarURL:     strings.TrimSpace(input.AvatarURL),
+		PasswordHash:  &hashedPassword,
 	}
 
 	err = repo.CreateIdentity(ctx, identity)

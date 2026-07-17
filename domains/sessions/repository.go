@@ -97,13 +97,10 @@ func (r *Repository) Create(ctx context.Context, session *Session) error {
 			refresh_token_hash,
 			ip_address,
 			user_agent,
-			expires_at,
-			created_at,
-			updated_at,
-			revoked_at
+			expires_at
 		) VALUES (
 			$1, $2, $3, $4, $5,
-			$6, $7, $8, $9
+			$6
 		)
 	`,
 		session.ID,
@@ -112,9 +109,6 @@ func (r *Repository) Create(ctx context.Context, session *Session) error {
 		session.IP,
 		session.UserAgent,
 		session.ExpiresAt,
-		session.CreatedAt,
-		session.UpdatedAt,
-		session.RevokedAt,
 	)
 	return err
 }
