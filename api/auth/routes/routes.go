@@ -6,12 +6,13 @@ import (
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
 	"idiom-api-services/api/auth/middlewares"
+	response "idiom-api-services/packages/responses"
 )
 
 func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppConfig) {
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 		handler.LoginHandler(w, r)
@@ -19,7 +20,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
@@ -33,7 +34,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 		handler.RegisterHandler(w, r)
@@ -41,7 +42,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 
 	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 		handler.VerifyHandler(w, r)
@@ -54,7 +55,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		case http.MethodPost:
 			handler.UpdatePasswordHandler(w, r)
 		default:
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
 	})
 
@@ -70,13 +71,13 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		case http.MethodPut:
 			handler.UpdateCurrentUserHandler(w, r)
 		default:
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
 	})
 
 	mux.HandleFunc("/token/refresh", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 

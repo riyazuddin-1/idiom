@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var logger = log.New(nil, "", log.LstdFlags)
+var logger = log.Default()
 
 type Postgres struct {
 	pool *pgxpool.Pool

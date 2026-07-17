@@ -3,6 +3,7 @@ package middlewares
 import (
 	"encoding/json"
 	"errors"
+	response "idiom-api-services/packages/responses"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -38,12 +39,12 @@ func ValidateLoginRequest(w http.ResponseWriter, r *http.Request) (*LoginRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
 			return nil, err
 		}
 	} else {
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
 			return nil, err
 		}
 		req.Email = r.FormValue("email")
@@ -51,13 +52,13 @@ func ValidateLoginRequest(w http.ResponseWriter, r *http.Request) (*LoginRequest
 	}
 
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, "Email and password are required", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Email and password are required")
 		return nil, errors.New("missing email or password")
 	}
 
 	email, err := normalizeEmail(req.Email)
 	if err != nil {
-		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Invalid email address")
 		return nil, err
 	}
 	req.Email = email
@@ -71,12 +72,12 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
 			return nil, err
 		}
 	} else {
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
 			return nil, err
 		}
 		req.Email = r.FormValue("email")
@@ -88,13 +89,13 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 	}
 
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, "Email and password are required", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Email and password are required")
 		return nil, errors.New("missing email or password")
 	}
 
 	email, err := normalizeEmail(req.Email)
 	if err != nil {
-		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Invalid email address")
 		return nil, err
 	}
 	req.Email = email
@@ -105,7 +106,7 @@ func ValidateRegisterRequest(w http.ResponseWriter, r *http.Request) (*RegisterR
 func ValidatePasswordResetEmailRequest(w http.ResponseWriter, r *http.Request) (*PasswordResetEmailRequest, error) {
 	email, err := normalizeEmail(r.URL.Query().Get("email"))
 	if err != nil {
-		http.Error(w, "Invalid email address", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Invalid email address")
 		return nil, err
 	}
 
@@ -120,12 +121,12 @@ func ValidatePasswordResetRequest(w http.ResponseWriter, r *http.Request) (*Pass
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
 			return nil, err
 		}
 	} else {
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
 			return nil, err
 		}
 		req.Scope = r.FormValue("scope")
@@ -134,12 +135,12 @@ func ValidatePasswordResetRequest(w http.ResponseWriter, r *http.Request) (*Pass
 	}
 
 	if req.Scope == "" || req.Password == "" || req.ConfirmPassword == "" {
-		http.Error(w, "Scope, password, and confirm password are required", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Scope, password, and confirm password are required")
 		return nil, errors.New("missing password reset fields")
 	}
 
 	if req.Password != req.ConfirmPassword {
-		http.Error(w, "Passwords do not match", http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "Passwords do not match")
 		return nil, errors.New("passwords do not match")
 	}
 

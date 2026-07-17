@@ -1,6 +1,7 @@
 package web
 
 import (
+	response "idiom-api-services/packages/responses"
 	"idiom-api-services/web/auth/handlers"
 	"net/http"
 )
@@ -8,7 +9,7 @@ import (
 func Mount(mux *http.ServeMux) {
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Invalid route", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
@@ -17,7 +18,7 @@ func Mount(mux *http.ServeMux) {
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {})
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Invalid route", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
@@ -25,7 +26,7 @@ func Mount(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("/password-reset", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Invalid route", http.StatusMethodNotAllowed)
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 

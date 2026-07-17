@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"encoding/json"
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/helpers"
 	"idiom-api-services/api/auth/middlewares"
 	"idiom-api-services/domains/identities"
 	"idiom-api-services/domains/sessions"
 	"idiom-api-services/packages/crypto"
+	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 	"time"
@@ -33,22 +33,14 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
 	identity, ok, err := identities.Login(r.Context(), h.repo, req.Email, req.Password)
 	if err != nil || !ok {
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid email or password",
-		})
+		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
 	if h.config.JWTSettings == nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "JWT settings are not configured",
-		})
+		response.Error(w, http.StatusInternalServerError, "JWT settings are not configured")
 		return
 	}
 
@@ -61,10 +53,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		r.UserAgent(),
 	)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to start session",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to start session")
 		return
 	}
 
@@ -77,8 +66,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	response.JSON(w, http.StatusOK, map[string]interface{}{
 		"message":     "Login successful",
 		"accessToken": tokens.AccessToken,
 		"user": map[string]string{
@@ -88,25 +76,17 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	user, ok := middlewares.UserFromContext(r.Context())
 
 	if !ok {
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Unauthorized",
-		})
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	revoked, err := sessions.Revoke(r.Context(), h.sessionRepo, user.SessionID)
 
 	if err != nil || !revoked {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to logout",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to logout")
 		return
 	}
 
@@ -120,10 +100,7 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Unix(0, 0),
 	})
 
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Logout successful",
-	})
+	response.Message(w, http.StatusOK, "Logout successful")
 }
 
 func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -131,8 +108,6 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
 
 	identity, err := identities.Register(r.Context(), h.repo, identities.RegisterInput{
 		Email:       req.Email,
@@ -143,70 +118,46 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		AvatarURL:   req.AvatarURL,
 	})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to register user",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to register user")
 		return
 	}
 
 	if err := helpers.SendVerificationEmail(r.Context(), h.config, identity); err != nil {
 		log.Printf("failed to send verification email to %s: %v", identity.Email, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to send verification email",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to send verification email")
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	response.JSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "User registered successfully. Please verify your email.",
 		"user":    identity,
 	})
 }
 
 func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	scope := r.URL.Query().Get("scope")
 	if scope == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Missing verification scope",
-		})
+		response.Error(w, http.StatusBadRequest, "Missing verification scope")
 		return
 	}
 
 	var payload helpers.Scope
 	if err := crypto.DecryptJSON(scope, h.config.VerificationSecret, &payload); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid verification scope",
-		})
+		response.Error(w, http.StatusBadRequest, "Invalid verification scope")
 		return
 	}
 
 	if payload.Operation != config.OperationEmailVerification {
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid verification scope",
-		})
+		response.Error(w, http.StatusBadRequest, "Invalid verification scope")
 		return
 	}
 
 	if err := identities.VerifyEmail(r.Context(), h.repo, payload.Email); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to verify email",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to verify email")
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Email verified successfully",
-	})
+	response.Message(w, http.StatusOK, "Email verified successfully")
 }
 
 func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
@@ -215,20 +166,13 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, req.Email); err != nil {
 		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to send password reset email",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to send password reset email")
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Password reset email sent",
-	})
+	response.Message(w, http.StatusOK, "Password reset email sent")
 }
 
 func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
@@ -237,37 +181,23 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
 	var payload helpers.Scope
 	if err := crypto.DecryptJSON(req.Scope, h.config.VerificationSecret, &payload); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid password reset scope",
-		})
+		response.Error(w, http.StatusBadRequest, "Invalid password reset scope")
 		return
 	}
 
 	if payload.Operation != config.OperationPasswordReset {
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid password reset scope",
-		})
+		response.Error(w, http.StatusBadRequest, "Invalid password reset scope")
 		return
 	}
 
 	if err := identities.UpdatePassword(r.Context(), h.repo, payload.Email, req.Password); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to update password",
-		})
+		response.Error(w, http.StatusInternalServerError, "Failed to update password")
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Password updated successfully",
-	})
+	response.Message(w, http.StatusOK, "Password updated successfully")
 }
 
 func (h *Handler) GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -280,24 +210,16 @@ func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Reques
 
 // Session management
 func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	refreshToken, err := r.Cookie("refresh_token")
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Refresh token not found",
-		})
+		response.Error(w, http.StatusUnauthorized, "Refresh token not found")
 		return
 	}
 
 	tokens, err := sessions.Refresh(r.Context(), h.sessionRepo, h.config.JWTSettings, refreshToken.Value)
 
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid refresh token",
-		})
+		response.Error(w, http.StatusUnauthorized, "Invalid refresh token")
 		return
 	}
 
@@ -310,8 +232,7 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	response.JSON(w, http.StatusOK, map[string]interface{}{
 		"message":     "Token refreshed successfully",
 		"accessToken": tokens.AccessToken,
 	})

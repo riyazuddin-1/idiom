@@ -3,6 +3,7 @@ package middlewares
 import (
 	"context"
 	"errors"
+	response "idiom-api-services/packages/responses"
 	"net/http"
 	"strings"
 
@@ -21,27 +22,27 @@ type AuthUser struct {
 func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	authorization := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authorization, "Bearer ") {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return nil, errors.New("Unauthorized")
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, errors.New("unauthorized")
 	}
 
 	token := authorization[len("Bearer "):]
 	if token == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return nil, errors.New("Unauthorized")
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, errors.New("unauthorized")
 	}
 
 	claims, err := jwtSettings.VerifyToken(token)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return nil, errors.New("Unauthorized")
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, errors.New("unauthorized")
 	}
 
 	identityID := claims.String("sub")
 	sessionID := claims.String("sid")
 	if identityID == "" || sessionID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return nil, errors.New("Unauthorized")
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, errors.New("unauthorized")
 	}
 
 	user := &AuthUser{
