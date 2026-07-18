@@ -24,26 +24,26 @@ type AuthUser struct {
 }
 
 func VerifyProject(projectRepo *projects.Repository, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	projectID := r.PathValue("project_id")
-	if projectID == "" {
+	projectIdentifier := r.PathValue("project_id")
+	if projectIdentifier == "" {
 		log.Printf("project verification failed: missing project path param path=%q", r.URL.Path)
 		http.NotFound(w, r)
 		return nil, errors.New("project path param missing")
 	}
 
-	active, err := projects.IsActive(r.Context(), projectRepo, projectID)
+	project, active, err := projects.ResolveActive(r.Context(), projectRepo, projectIdentifier)
 	if err != nil {
-		log.Printf("project verification errored project=%q path=%q: %v", projectID, r.URL.Path, err)
+		log.Printf("project verification errored project=%q path=%q: %v", projectIdentifier, r.URL.Path, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to resolve project")
 		return nil, err
 	}
 	if !active {
-		log.Printf("project verification failed project=%q path=%q", projectID, r.URL.Path)
+		log.Printf("project verification failed project=%q path=%q", projectIdentifier, r.URL.Path)
 		http.NotFound(w, r)
 		return nil, errors.New("project not found")
 	}
 
-	return r.WithContext(ContextWithProjectID(r.Context(), projectID)), nil
+	return r.WithContext(ContextWithProjectID(r.Context(), project.ID)), nil
 }
 
 func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {

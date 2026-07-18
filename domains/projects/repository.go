@@ -16,21 +16,49 @@ func NewRepository(db *postgres.Postgres) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) ActiveExists(ctx context.Context, projectID string) (bool, error) {
+func (r *Repository) GetActiveByIdentifier(ctx context.Context, identifier string) (*Project, error) {
 	row := r.db.QueryRow(ctx, `
-		SELECT id
+		SELECT
+			id,
+			organization_id,
+			name,
+			slug,
+			description,
+			status,
+			created_at,
+			updated_at
 		FROM projects
-		WHERE id = $1
+		WHERE (id = $1 OR slug = $1)
 			AND status = 'active'
-	`, projectID)
+		ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END
+		LIMIT 1
+	`, identifier)
 
-	var id string
-	if err := row.Scan(&id); err != nil {
+	var project Project
+	if err := row.Scan(
+		&project.ID,
+		&project.OrganizationID,
+		&project.Name,
+		&project.Slug,
+		&project.Description,
+		&project.Status,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	); err != nil {
 		if err == pgx.ErrNoRows {
-			return false, nil
+			return nil, nil
 		}
+		return nil, err
+	}
+
+	return &project, nil
+}
+
+func (r *Repository) ActiveExists(ctx context.Context, identifier string) (bool, error) {
+	project, err := r.GetActiveByIdentifier(ctx, identifier)
+	if err != nil {
 		return false, err
 	}
 
-	return true, nil
+	return project != nil, nil
 }
