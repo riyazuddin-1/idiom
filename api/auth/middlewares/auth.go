@@ -15,7 +15,7 @@ import (
 type contextKey string
 
 const authUserContextKey contextKey = "auth_user"
-const projectIDContextKey contextKey = "project_id"
+const projectContextKey contextKey = "project"
 
 type AuthUser struct {
 	IdentityID string
@@ -43,7 +43,7 @@ func VerifyProject(projectRepo *projects.Repository, w http.ResponseWriter, r *h
 		return nil, errors.New("project not found")
 	}
 
-	return r.WithContext(ContextWithProjectID(r.Context(), project.ID)), nil
+	return r.WithContext(ContextWithProject(r.Context(), project)), nil
 }
 
 func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
@@ -73,7 +73,7 @@ func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *htt
 		return nil, errors.New("unauthorized")
 	}
 
-	if routeProjectID, ok := ProjectIDFromContext(r.Context()); ok && routeProjectID != projectID {
+	if routeProject, ok := ProjectFromContext(r.Context()); ok && routeProject.ID != projectID {
 		response.Error(w, http.StatusUnauthorized, "Unauthorized")
 		return nil, errors.New("unauthorized")
 	}
@@ -96,11 +96,11 @@ func UserFromContext(ctx context.Context) (*AuthUser, bool) {
 	return user, ok
 }
 
-func ContextWithProjectID(ctx context.Context, projectID string) context.Context {
-	return context.WithValue(ctx, projectIDContextKey, projectID)
+func ContextWithProject(ctx context.Context, project *projects.Project) context.Context {
+	return context.WithValue(ctx, projectContextKey, project)
 }
 
-func ProjectIDFromContext(ctx context.Context) (string, bool) {
-	projectID, ok := ctx.Value(projectIDContextKey).(string)
-	return projectID, ok && projectID != ""
+func ProjectFromContext(ctx context.Context) (*projects.Project, bool) {
+	project, ok := ctx.Value(projectContextKey).(*projects.Project)
+	return project, ok && project != nil
 }

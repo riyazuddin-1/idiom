@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"encoding/json"
 
 	"idiom-api-services/packages/database/postgres"
 
@@ -25,6 +26,9 @@ func (r *Repository) GetActiveByIdentifier(ctx context.Context, identifier strin
 			slug,
 			description,
 			status,
+			auth_options,
+			redirect_urls,
+			allowed_origins,
 			created_at,
 			updated_at
 		FROM projects
@@ -35,6 +39,7 @@ func (r *Repository) GetActiveByIdentifier(ctx context.Context, identifier strin
 	`, identifier)
 
 	var project Project
+	var redirectURLs []byte
 	if err := row.Scan(
 		&project.ID,
 		&project.OrganizationID,
@@ -42,6 +47,9 @@ func (r *Repository) GetActiveByIdentifier(ctx context.Context, identifier strin
 		&project.Slug,
 		&project.Description,
 		&project.Status,
+		&project.AuthOptions,
+		&redirectURLs,
+		&project.AllowedOrigins,
 		&project.CreatedAt,
 		&project.UpdatedAt,
 	); err != nil {
@@ -49,6 +57,12 @@ func (r *Repository) GetActiveByIdentifier(ctx context.Context, identifier strin
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	if len(redirectURLs) > 0 {
+		if err := json.Unmarshal(redirectURLs, &project.RedirectURLs); err != nil {
+			return nil, err
+		}
 	}
 
 	return &project, nil

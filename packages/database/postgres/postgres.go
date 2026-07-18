@@ -62,3 +62,12 @@ func (p *Postgres) Exec(ctx context.Context, query string, args ...interface{}) 
 func (p *Postgres) QueryRow(ctx context.Context, query string, args ...interface{}) pgx.Row {
 	return p.pool.QueryRow(ctx, query, args...)
 }
+
+func (p *Postgres) Query(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
+	rows, err := p.pool.Query(ctx, query, args...)
+	if err != nil {
+		logger.Printf("Failed to query Postgres database: %v", err)
+		return nil, err
+	}
+	return rows, nil
+}

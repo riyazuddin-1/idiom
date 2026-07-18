@@ -132,6 +132,44 @@ func (r *Repository) UpdateRefreshToken(ctx context.Context, refreshToken string
 	return &session, newRefreshToken, projectID, nil
 }
 
+func (r *Repository) UpdateRefreshTokenBySessionID(ctx context.Context, sessionID, refreshTokenHash string) (*Session, error) {
+	row := r.db.QueryRow(ctx, `
+		UPDATE sessions
+		SET refresh_token_hash = $2,
+			updated_at = NOW()
+		WHERE id = $1
+			AND revoked_at IS NULL
+			AND expires_at > NOW()
+		RETURNING
+			id,
+			identity_id,
+			refresh_token_hash,
+			ip_address,
+			user_agent,
+			expires_at,
+			created_at,
+			updated_at,
+			revoked_at
+	`, sessionID, refreshTokenHash)
+
+	var session Session
+	if err := row.Scan(
+		&session.ID,
+		&session.IdentityID,
+		&session.RefreshTokenHash,
+		&session.IP,
+		&session.UserAgent,
+		&session.ExpiresAt,
+		&session.CreatedAt,
+		&session.UpdatedAt,
+		&session.RevokedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
 func (r *Repository) RevokeSession(ctx context.Context, sessionID string) (bool, error) {
 	result, err := r.db.Exec(
 		ctx,

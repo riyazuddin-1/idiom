@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"html/template"
-	"idiom-api-services/api/auth/middlewares"
 	"net/http"
 )
 
@@ -19,7 +18,7 @@ func PasswordResetPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderTemplate(w http.ResponseWriter, r *http.Request, path string) {
-	projectID, _ := middlewares.ProjectIDFromContext(r.Context())
+	projectID := r.PathValue("project_id")
 	tmpl := template.Must(template.ParseFiles(path))
 	_ = tmpl.Execute(w, map[string]string{
 		"ProjectID": projectID,

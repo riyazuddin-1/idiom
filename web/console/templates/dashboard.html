@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Idiom Console</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: #172026;
+            background: #f5f7f8;
+        }
+
+        .topbar {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            border-bottom: 1px solid #dfe6ea;
+            background: #ffffff;
+            font-weight: 700;
+        }
+
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 28px;
+            line-height: 1.2;
+        }
+
+        .status {
+            margin-bottom: 16px;
+            color: #5f6f78;
+            font-size: 14px;
+        }
+
+        .list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .organization {
+            padding: 16px;
+            border: 1px solid #dfe6ea;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        .organization h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .organization p {
+            margin: 0;
+            color: #5f6f78;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">Idiom Console</header>
+    <main>
+        <h1>Organizations</h1>
+        <div id="status" class="status">Loading organizations...</div>
+        <div id="organizations" class="list"></div>
+    </main>
+    <script>
+        const authBaseURL = "{{.AuthBaseURL}}";
+        const authProject = "{{.AuthProject}}";
+        const statusEl = document.getElementById("status");
+        const organizationsEl = document.getElementById("organizations");
+
+        async function accessTokenFromLocation() {
+            const query = new URLSearchParams(window.location.search);
+            const code = query.get("code");
+            if (!code) {
+                return window.localStorage.getItem("idiom_access_token");
+            }
+
+            const response = await fetch(`${authBaseURL}/api/v1/token`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    code,
+                    project_id: authProject
+                })
+            });
+
+            if (!response.ok) {
+                return "";
+            }
+
+            const data = await response.json();
+            window.localStorage.setItem("idiom_access_token", data.accessToken);
+            history.replaceState(null, "", window.location.pathname);
+            return data.accessToken;
+        }
+
+        function renderOrganizations(organizations) {
+            organizationsEl.innerHTML = "";
+            if (organizations.length === 0) {
+                statusEl.textContent = "No organizations found.";
+                return;
+            }
+
+            statusEl.textContent = "";
+            for (const organization of organizations) {
+                const item = document.createElement("article");
+                item.className = "organization";
+
+                const title = document.createElement("h2");
+                title.textContent = organization.name;
+
+                const meta = document.createElement("p");
+                meta.textContent = `${organization.slug} · ${organization.status}`;
+
+                item.append(title, meta);
+                organizationsEl.append(item);
+            }
+        }
+
+        async function loadOrganizations() {
+            const token = await accessTokenFromLocation();
+            if (!token) {
+                window.location.href = "/home";
+                return;
+            }
+
+            const response = await fetch("/api/v1/organizations", {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                statusEl.textContent = "Unable to load organizations.";
+                return;
+            }
+
+            const data = await response.json();
+            renderOrganizations(data.organizations || []);
+        }
+
+        loadOrganizations().catch(function () {
+            statusEl.textContent = "Unable to load organizations.";
+        });
+    </script>
+</body>
+</html>

@@ -21,6 +21,14 @@ type Handler struct {
 	projectRepo *projects.Repository
 }
 
+type loginCodeScope struct {
+	Operation  string `json:"operation"`
+	ProjectID  string `json:"pid"`
+	IdentityID string `json:"sub"`
+	SessionID  string `json:"sid"`
+	ExpiresAt  int64  `json:"exp"`
+}
+
 func NewHandler(config config.AppConfig) *Handler {
 	return &Handler{
 		config:      config,
@@ -45,11 +53,12 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	project, ok := middlewares.ProjectFromContext(r.Context())
 	if !ok {
 		response.Error(w, http.StatusInternalServerError, "Project is not configured")
 		return
 	}
+	projectID := project.ID
 
 	identity, ok, err := identities.Login(r.Context(), h.repo, projectID, req.Email, req.Password)
 	if err != nil || !ok {
@@ -63,10 +72,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := sessions.Start(
+	session, err := sessions.Create(
 		r.Context(),
 		h.sessionRepo,
-		h.config.JWTSettings,
 		identity,
 		r.RemoteAddr,
 		r.UserAgent(),
@@ -77,7 +85,71 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("login succeeded project=%q email=%q identity=%q session=%q", projectID, req.Email, identity.ID, tokens.SessionID)
+	code, err := crypto.EncryptJSON(loginCodeScope{
+		Operation:  config.OperationLogin,
+		ProjectID:  identity.ProjectID,
+		IdentityID: identity.ID,
+		SessionID:  session.ID,
+		ExpiresAt:  time.Now().UTC().Add(60 * time.Second).Unix(),
+	}, h.config.VerificationSecret)
+	if err != nil {
+		log.Printf("login code creation failed project=%q email=%q identity=%q session=%q: %v", projectID, req.Email, identity.ID, session.ID, err)
+		response.Error(w, http.StatusInternalServerError, "Failed to start session")
+		return
+	}
+
+	log.Printf("login succeeded project=%q email=%q identity=%q session=%q", projectID, req.Email, identity.ID, session.ID)
+
+	if response.Redirect(w, r, project.RedirectURLs, code) {
+		return
+	}
+
+	response.JSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Login successful",
+		"code":    code,
+		"user": map[string]string{
+			"email": identity.Email,
+		},
+	})
+}
+
+func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
+	req, err := middlewares.ValidateTokenRequest(w, r)
+	if err != nil {
+		return
+	}
+
+	project, ok, err := projects.ResolveActive(r.Context(), h.projectRepo, req.ProjectID)
+	if err != nil {
+		log.Printf("token exchange project resolution errored project=%q: %v", req.ProjectID, err)
+		response.Error(w, http.StatusInternalServerError, "Failed to resolve project")
+		return
+	}
+	if !ok {
+		log.Printf("token exchange failed project=%q: project not found", req.ProjectID)
+		response.Error(w, http.StatusUnauthorized, "Invalid authorization code")
+		return
+	}
+
+	var payload loginCodeScope
+	if err := crypto.DecryptJSON(req.Code, h.config.VerificationSecret, &payload); err != nil {
+		log.Printf("token exchange failed project=%q: invalid code: %v", project.ID, err)
+		response.Error(w, http.StatusUnauthorized, "Invalid authorization code")
+		return
+	}
+
+	if payload.Operation != config.OperationLogin || payload.ProjectID != project.ID || payload.IdentityID == "" || payload.SessionID == "" || payload.ExpiresAt < time.Now().UTC().Unix() {
+		log.Printf("token exchange failed route_project=%q code_project=%q identity=%q session=%q operation=%q", project.ID, payload.ProjectID, payload.IdentityID, payload.SessionID, payload.Operation)
+		response.Error(w, http.StatusUnauthorized, "Invalid authorization code")
+		return
+	}
+
+	tokens, err := sessions.IssueTokens(r.Context(), h.sessionRepo, h.config.JWTSettings, payload.SessionID, payload.IdentityID, payload.ProjectID)
+	if err != nil {
+		log.Printf("token exchange issue failed project=%q session=%q identity=%q: %v", project.ID, payload.SessionID, payload.IdentityID, err)
+		response.Error(w, http.StatusInternalServerError, "Failed to issue tokens")
+		return
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
@@ -88,12 +160,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
+	log.Printf("token exchange succeeded project=%q identity=%q session=%q", project.ID, tokens.IdentityID, tokens.SessionID)
 	response.JSON(w, http.StatusOK, map[string]interface{}{
-		"message":     "Login successful",
 		"accessToken": tokens.AccessToken,
-		"user": map[string]string{
-			"email": identity.Email,
-		},
 	})
 }
 
@@ -144,11 +213,12 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	project, ok := middlewares.ProjectFromContext(r.Context())
 	if !ok {
 		response.Error(w, http.StatusInternalServerError, "Project is not configured")
 		return
 	}
+	projectID := project.ID
 
 	identity, err := identities.Register(r.Context(), h.repo, identities.RegisterInput{
 		ProjectID:   projectID,
@@ -233,11 +303,12 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
+	project, ok := middlewares.ProjectFromContext(r.Context())
 	if !ok {
 		response.Error(w, http.StatusInternalServerError, "Project is not configured")
 		return
 	}
+	projectID := project.ID
 
 	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, projectID, req.Email); err != nil {
 		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
@@ -278,12 +349,17 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	projectID, ok := middlewares.ProjectIDFromContext(r.Context())
-	if !ok || payload.ProjectID != projectID {
+	project, ok := middlewares.ProjectFromContext(r.Context())
+	if !ok || payload.ProjectID != project.ID {
+		projectID := ""
+		if ok {
+			projectID = project.ID
+		}
 		log.Printf("password update failed route_project=%q scope_project=%q email=%q", projectID, payload.ProjectID, payload.Email)
 		response.Error(w, http.StatusBadRequest, "Invalid password reset scope")
 		return
 	}
+	projectID := project.ID
 
 	if err := identities.UpdatePassword(r.Context(), h.repo, projectID, payload.Email, req.Password); err != nil {
 		log.Printf("password update failed project=%q email=%q: %v", projectID, payload.Email, err)

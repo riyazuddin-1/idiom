@@ -3,6 +3,7 @@ package config
 import "net/url"
 
 const (
+	OperationLogin             = "login"
 	OperationEmailVerification = "email_verification"
 	OperationPasswordReset     = "password_reset"
 

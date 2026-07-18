@@ -33,6 +33,12 @@ type PasswordResetRequest struct {
 	ConfirmPassword string `json:"confirm_password"`
 }
 
+type TokenRequest struct {
+	Code      string `json:"code"`
+	ProjectID string `json:"project_id"`
+	APIKey    string `json:"api_key"`
+}
+
 func ValidateLoginRequest(w http.ResponseWriter, r *http.Request) (*LoginRequest, error) {
 	var req LoginRequest
 
@@ -142,6 +148,37 @@ func ValidatePasswordResetRequest(w http.ResponseWriter, r *http.Request) (*Pass
 	if req.Password != req.ConfirmPassword {
 		response.Error(w, http.StatusBadRequest, "Passwords do not match")
 		return nil, errors.New("passwords do not match")
+	}
+
+	return &req, nil
+}
+
+func ValidateTokenRequest(w http.ResponseWriter, r *http.Request) (*TokenRequest, error) {
+	var req TokenRequest
+
+	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
+			return nil, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			response.Error(w, http.StatusBadRequest, "Invalid request payload")
+			return nil, err
+		}
+		req.Code = r.FormValue("code")
+		req.ProjectID = r.FormValue("project_id")
+		req.APIKey = r.FormValue("api_key")
+	}
+
+	req.Code = strings.TrimSpace(req.Code)
+	req.ProjectID = strings.TrimSpace(req.ProjectID)
+	req.APIKey = strings.TrimSpace(req.APIKey)
+
+	if req.Code == "" || req.ProjectID == "" {
+		response.Error(w, http.StatusBadRequest, "Code and project_id are required")
+		return nil, errors.New("missing token exchange fields")
 	}
 
 	return &req, nil

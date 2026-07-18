@@ -11,6 +11,7 @@ import (
 	"idiom-api-services/api/console/handlers"
 	api "idiom-api-services/api/console/routes"
 	"idiom-api-services/packages/database/postgres"
+	"idiom-api-services/packages/jwt"
 	web "idiom-api-services/web/console/routes"
 )
 
@@ -26,8 +27,15 @@ func main() {
 
 	// Shared app configuration
 	appConfig := config.AppConfig{
-
 		PostgresDB: pg,
+		JWTSettings: jwt.NewJWTSettings(
+			"",
+			config.JWTPublicKey,
+			0,
+			config.TokenIssuer,
+		),
+		AuthBaseURL: config.AuthBaseURL,
+		AuthProject: config.AuthProject,
 	}
 
 	// Handlers
@@ -42,11 +50,11 @@ func main() {
 
 	// Web routes (SSR)
 	webMux := http.NewServeMux()
-	web.Mount(webMux)
+	web.Mount(webMux, appConfig)
 
 	// Mount routers
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
-	mux.Handle("/web/", http.StripPrefix("/web", webMux))
+	mux.Handle("/", webMux)
 
 	// Health check
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

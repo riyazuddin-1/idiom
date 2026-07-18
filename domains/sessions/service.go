@@ -20,23 +20,14 @@ type SessionTokens struct {
 	ProjectID    string
 }
 
-func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*SessionTokens, error) {
+func Create(ctx context.Context, repo *Repository, identity *identities.Identity, ip string, userAgent string) (*Session, error) {
 	sessionID := crypto.GenerateID("sid_")
-	accessToken, err := jwtSettings.CreateToken(jwt.CustomClaims{
-		"sid": sessionID,
-		"sub": identity.ID,
-		"pid": identity.ProjectID,
-	})
+	initialRefreshToken, err := crypto.RandomString(refreshTokenLength)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := crypto.RandomString(refreshTokenLength)
-	if err != nil {
-		return nil, err
-	}
-	refreshTokenHash, err := crypto.HashString(refreshToken)
-
+	refreshTokenHash, err := crypto.HashString(initialRefreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +46,49 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 		return nil, err
 	}
 
+	return session, nil
+}
+
+func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*SessionTokens, error) {
+	session, err := Create(ctx, repo, identity, ip, userAgent)
+	if err != nil {
+		return nil, err
+	}
+
+	return IssueTokens(ctx, repo, jwtSettings, session.ID, identity.ID, identity.ProjectID)
+}
+
+func IssueTokens(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, sessionID, identityID, projectID string) (*SessionTokens, error) {
+	accessToken, err := jwtSettings.CreateToken(jwt.CustomClaims{
+		"sid": sessionID,
+		"sub": identityID,
+		"pid": projectID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := crypto.RandomString(refreshTokenLength)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshTokenHash, err := crypto.HashString(refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := repo.UpdateRefreshTokenBySessionID(ctx, sessionID, refreshTokenHash)
+	if err != nil {
+		return nil, err
+	}
+
 	return &SessionTokens{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		SessionID:    session.ID,
-		IdentityID:   identity.ID,
-		ProjectID:    identity.ProjectID,
+		IdentityID:   identityID,
+		ProjectID:    projectID,
 	}, nil
 }
 
