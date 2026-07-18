@@ -24,11 +24,11 @@ func (r *Repository) GetActiveByIdentifier(ctx context.Context, identifier strin
 			organization_id,
 			name,
 			slug,
-			description,
+			COALESCE(description, ''),
 			status,
-			auth_options,
-			redirect_urls,
-			allowed_origins,
+			COALESCE(auth_options, ARRAY[]::text[]),
+			COALESCE(redirect_urls, '[]'::jsonb),
+			COALESCE(allowed_origins, ARRAY[]::text[]),
 			created_at,
 			updated_at
 		FROM projects
