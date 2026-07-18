@@ -25,6 +25,12 @@ type AuthUser struct {
 
 func VerifyProject(projectRepo *projects.Repository, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	projectID := r.PathValue("project_id")
+	if projectID == "" {
+		log.Printf("project verification failed: missing project path param path=%q", r.URL.Path)
+		http.NotFound(w, r)
+		return nil, errors.New("project path param missing")
+	}
+
 	active, err := projects.IsActive(r.Context(), projectRepo, projectID)
 	if err != nil {
 		log.Printf("project verification errored project=%q path=%q: %v", projectID, r.URL.Path, err)

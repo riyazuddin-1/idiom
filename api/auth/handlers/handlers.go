@@ -31,10 +31,12 @@ func NewHandler(config config.AppConfig) *Handler {
 }
 
 func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	routeProjectID := r.PathValue("project_id")
+	path := r.URL.Path
 	var err error
 	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
 	if err != nil {
-		log.Printf("login project verification failed project=%q path=%q: %v", r.PathValue("project_id"), r.URL.Path, err)
+		log.Printf("login project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
 	}
 
@@ -128,10 +130,12 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	routeProjectID := r.PathValue("project_id")
+	path := r.URL.Path
 	var err error
 	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
 	if err != nil {
-		log.Printf("register project verification failed project=%q path=%q: %v", r.PathValue("project_id"), r.URL.Path, err)
+		log.Printf("register project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
 	}
 
@@ -215,10 +219,12 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
+	routeProjectID := r.PathValue("project_id")
+	path := r.URL.Path
 	var err error
 	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
 	if err != nil {
-		log.Printf("password reset request project verification failed project=%q path=%q: %v", r.PathValue("project_id"), r.URL.Path, err)
+		log.Printf("password reset request project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
 	}
 
@@ -245,10 +251,12 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	routeProjectID := r.PathValue("project_id")
+	path := r.URL.Path
 	var err error
 	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
 	if err != nil {
-		log.Printf("password update project verification failed project=%q path=%q: %v", r.PathValue("project_id"), r.URL.Path, err)
+		log.Printf("password update project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
 	}
 
