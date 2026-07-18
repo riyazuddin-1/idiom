@@ -16,6 +16,8 @@ type SessionTokens struct {
 	AccessToken  string
 	RefreshToken string
 	SessionID    string
+	IdentityID   string
+	ProjectID    string
 }
 
 func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, identity *identities.Identity, ip string, userAgent string) (*SessionTokens, error) {
@@ -57,6 +59,8 @@ func Start(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings, 
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		SessionID:    session.ID,
+		IdentityID:   identity.ID,
+		ProjectID:    identity.ProjectID,
 	}, nil
 }
 
@@ -79,6 +83,8 @@ func Refresh(ctx context.Context, repo *Repository, jwtSettings *jwt.JWTSettings
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 		SessionID:    session.ID,
+		IdentityID:   session.IdentityID,
+		ProjectID:    projectID,
 	}, nil
 }
 

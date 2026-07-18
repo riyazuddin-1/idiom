@@ -5,6 +5,7 @@ import (
 	"errors"
 	"idiom-api-services/domains/projects"
 	response "idiom-api-services/packages/responses"
+	"log"
 	"net/http"
 	"strings"
 
@@ -26,10 +27,12 @@ func VerifyProject(projectRepo *projects.Repository, w http.ResponseWriter, r *h
 	projectID := r.PathValue("project_id")
 	active, err := projects.IsActive(r.Context(), projectRepo, projectID)
 	if err != nil {
+		log.Printf("project verification errored project=%q path=%q: %v", projectID, r.URL.Path, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to resolve project")
 		return nil, err
 	}
 	if !active {
+		log.Printf("project verification failed project=%q path=%q", projectID, r.URL.Path)
 		http.NotFound(w, r)
 		return nil, errors.New("project not found")
 	}
