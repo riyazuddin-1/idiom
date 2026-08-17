@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"idiom-api-services/api/console/config"
-	"idiom-api-services/api/console/handlers"
 	api "idiom-api-services/api/console/routes"
 	"idiom-api-services/packages/database/postgres"
 	"idiom-api-services/packages/jwt"
@@ -38,15 +37,12 @@ func main() {
 		AuthProject: config.AuthProject,
 	}
 
-	// Handlers
-	consoleHandler := handlers.NewHandler(appConfig)
-
 	// Root mux
 	mux := http.NewServeMux()
 
 	// API routes
 	apiMux := http.NewServeMux()
-	api.Mount(apiMux, consoleHandler, appConfig)
+	api.Mount(apiMux, appConfig)
 
 	// Web routes (SSR)
 	webMux := http.NewServeMux()

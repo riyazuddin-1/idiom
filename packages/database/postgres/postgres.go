@@ -71,3 +71,16 @@ func (p *Postgres) Query(ctx context.Context, query string, args ...interface{})
 	}
 	return rows, nil
 }
+
+func (p *Postgres) Begin(ctx context.Context) (pgx.Tx, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		logger.Printf("Failed to begin Postgres transaction: %v", err)
+		return nil, err
+	}
+
+	return tx, nil
+}

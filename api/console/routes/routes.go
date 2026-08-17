@@ -7,13 +7,17 @@ import (
 	"net/http"
 )
 
-func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppConfig) {
+func Mount(mux *http.ServeMux, appConfig config.AppConfig) {
+	handler := handlers.NewHandler(appConfig)
+	// Organization routes
 	mux.HandleFunc("/organizations", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handler.ListOrganizationsHandler(w, r)
+			return
 		case http.MethodPost:
 			handler.CreateOrganizationHandler(w, r)
+			return
 		default:
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
@@ -23,8 +27,10 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		switch r.Method {
 		case http.MethodPut:
 			handler.UpdateOrganizationHandler(w, r)
+			return
 		case http.MethodDelete:
 			handler.DeleteOrganizationHandler(w, r)
+			return
 		default:
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
@@ -39,6 +45,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		handler.UpdateOrganizationStatusHandler(w, r)
 	})
 
+	// Organization member routes
 	mux.HandleFunc("/organizations/{oid}/members", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -64,5 +71,35 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		}
 
 		handler.DeleteOrganizationMemberHandler(w, r)
+	})
+
+	// Organization project routes
+	mux.HandleFunc("/organizations/{oid}/projects", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.ListOrganizationProjectsHandler(w, r)
+			return
+		case http.MethodPost:
+			handler.CreateOrganizationProjectHandler(w, r)
+			return
+		default:
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		}
+	})
+
+	mux.HandleFunc("/organizations/{oid}/projects/{pid}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.GetOrganizationProjectHandler(w, r)
+			return
+		case http.MethodPut:
+			handler.UpdateOrganizationProjectHandler(w, r)
+			return
+		case http.MethodDelete:
+			handler.DeleteOrganizationProjectHandler(w, r)
+			return
+		default:
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		}
 	})
 }

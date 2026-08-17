@@ -3,21 +3,27 @@ package handlers
 import (
 	authmiddlewares "idiom-api-services/api/auth/middlewares"
 	"idiom-api-services/api/console/config"
+	"idiom-api-services/domains/org_members"
 	"idiom-api-services/domains/organizations"
+	"idiom-api-services/domains/projects"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 )
 
 type Handler struct {
-	config  config.AppConfig
-	orgRepo *organizations.Repository
+	config      config.AppConfig
+	orgRepo     *organizations.Repository
+	memberRepo  *org_members.Repository
+	projectRepo *projects.Repository
 }
 
 func NewHandler(config config.AppConfig) *Handler {
 	return &Handler{
-		config:  config,
-		orgRepo: organizations.NewRepository(config.PostgresDB),
+		config:      config,
+		orgRepo:     organizations.NewRepository(config.PostgresDB),
+		memberRepo:  org_members.NewRepository(config.PostgresDB),
+		projectRepo: projects.NewRepository(config.PostgresDB),
 	}
 }
 
@@ -46,32 +52,4 @@ func (h *Handler) ListOrganizationsHandler(w http.ResponseWriter, r *http.Reques
 	response.JSON(w, http.StatusOK, map[string]interface{}{
 		"organizations": organizations,
 	})
-}
-
-func (h *Handler) CreateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
-}
-
-func (h *Handler) UpdateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
-}
-
-func (h *Handler) UpdateOrganizationStatusHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
-}
-
-func (h *Handler) DeleteOrganizationHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
-}
-
-func (h *Handler) ListOrganizationMembersHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
-}
-
-func (h *Handler) UpdateOrganizationMemberStatusHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
-}
-
-func (h *Handler) DeleteOrganizationMemberHandler(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "Not implemented")
 }
