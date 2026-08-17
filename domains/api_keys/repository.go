@@ -239,6 +239,7 @@ func (r *Repository) Revoke(
 
 func (r *Repository) GetActiveByPrefix(
 	ctx context.Context,
+	projectID string,
 	keyPrefix string,
 ) (*APIKey, error) {
 	row := r.db.QueryRow(ctx, `
@@ -254,10 +255,11 @@ func (r *Repository) GetActiveByPrefix(
 			created_at,
 			revoked_at
 		FROM api_keys
-		WHERE key_prefix = $1
+		WHERE project_id = $1
+			AND key_prefix = $2
 			AND is_active = true
 		LIMIT 1
-	`, keyPrefix)
+	`, projectID, keyPrefix)
 
 	var apiKey APIKey
 

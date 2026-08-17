@@ -13,6 +13,7 @@ import (
 var (
 	ErrNameRequired = errors.New("api key name is required")
 	ErrNotFound     = errors.New("api key not found")
+	ErrInvalidKey   = errors.New("invalid api key")
 )
 
 type CreateInput struct {
@@ -23,6 +24,45 @@ type CreateInput struct {
 type CreateResult struct {
 	APIKey *APIKey `json:"api_key"`
 	Key    string  `json:"key"`
+}
+
+func Verify(
+	ctx context.Context,
+	repo *Repository,
+	projectID string,
+	key string,
+) (*APIKey, error) {
+	if projectID == "" || key == "" {
+		return nil, ErrInvalidKey
+	}
+
+	prefix := keyPrefix(key)
+	if prefix == "" {
+		return nil, ErrInvalidKey
+	}
+
+	apiKey, err := repo.GetActiveByPrefix(ctx, projectID, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiKey == nil {
+		return nil, ErrInvalidKey
+	}
+
+	if !crypto.CheckPasswordHash(key, apiKey.KeyHash) {
+		return nil, ErrInvalidKey
+	}
+
+	return apiKey, nil
+}
+
+func keyPrefix(key string) string {
+	if len(key) < 11 {
+		return ""
+	}
+
+	return key[:11]
 }
 
 func ListByProjectID(

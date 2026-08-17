@@ -4,6 +4,7 @@ import (
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/helpers"
 	"idiom-api-services/api/auth/middlewares"
+	apikeys "idiom-api-services/domains/api_keys"
 	"idiom-api-services/domains/identities"
 	"idiom-api-services/domains/projects"
 	"idiom-api-services/domains/sessions"
@@ -19,6 +20,7 @@ type Handler struct {
 	repo        *identities.Repository
 	sessionRepo *sessions.Repository
 	projectRepo *projects.Repository
+	apiKeyRepo  *apikeys.Repository
 }
 
 type loginCodeScope struct {
@@ -35,6 +37,7 @@ func NewHandler(config config.AppConfig) *Handler {
 		repo:        identities.NewRepository(config.PostgresDB),
 		sessionRepo: sessions.NewRepository(config.PostgresDB),
 		projectRepo: projects.NewRepository(config.PostgresDB),
+		apiKeyRepo:  apikeys.NewRepository(config.PostgresDB),
 	}
 }
 
@@ -119,35 +122,117 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, ok, err := projects.ResolveActive(r.Context(), h.projectRepo, req.ProjectID)
+	project, ok, err := projects.ResolveActive(
+		r.Context(),
+		h.projectRepo,
+		req.ProjectID,
+	)
 	if err != nil {
-		log.Printf("token exchange project resolution errored project=%q: %v", req.ProjectID, err)
-		response.Error(w, http.StatusInternalServerError, "Failed to resolve project")
+		log.Printf(
+			"token exchange project resolution errored project=%q: %v",
+			req.ProjectID,
+			err,
+		)
+		response.Error(
+			w,
+			http.StatusInternalServerError,
+			"Failed to resolve project",
+		)
 		return
 	}
+
 	if !ok {
-		log.Printf("token exchange failed project=%q: project not found", req.ProjectID)
-		response.Error(w, http.StatusUnauthorized, "Invalid authorization code")
+		log.Printf(
+			"token exchange failed project=%q: project not found",
+			req.ProjectID,
+		)
+		response.Error(
+			w,
+			http.StatusUnauthorized,
+			"Invalid authorization code",
+		)
 		return
 	}
+
+	// r, err = middlewares.VerifyAPIKey(
+	// 	h.apiKeyRepo,
+	// 	project.ID,
+	// 	w,
+	// 	r,
+	// )
+	// if err != nil {
+	// 	log.Printf(
+	// 		"token exchange api key verification failed project=%q: %v",
+	// 		project.ID,
+	// 		err,
+	// 	)
+	// 	return
+	// }
 
 	var payload loginCodeScope
-	if err := crypto.DecryptJSON(req.Code, h.config.VerificationSecret, &payload); err != nil {
-		log.Printf("token exchange failed project=%q: invalid code: %v", project.ID, err)
-		response.Error(w, http.StatusUnauthorized, "Invalid authorization code")
+
+	if err := crypto.DecryptJSON(
+		req.Code,
+		h.config.VerificationSecret,
+		&payload,
+	); err != nil {
+		log.Printf(
+			"token exchange failed project=%q: invalid code: %v",
+			project.ID,
+			err,
+		)
+		response.Error(
+			w,
+			http.StatusUnauthorized,
+			"Invalid authorization code",
+		)
 		return
 	}
 
-	if payload.Operation != config.OperationLogin || payload.ProjectID != project.ID || payload.IdentityID == "" || payload.SessionID == "" || payload.ExpiresAt < time.Now().UTC().Unix() {
-		log.Printf("token exchange failed route_project=%q code_project=%q identity=%q session=%q operation=%q", project.ID, payload.ProjectID, payload.IdentityID, payload.SessionID, payload.Operation)
-		response.Error(w, http.StatusUnauthorized, "Invalid authorization code")
+	if payload.Operation != config.OperationLogin ||
+		payload.ProjectID != project.ID ||
+		payload.IdentityID == "" ||
+		payload.SessionID == "" ||
+		payload.ExpiresAt < time.Now().UTC().Unix() {
+
+		log.Printf(
+			"token exchange failed route_project=%q code_project=%q identity=%q session=%q operation=%q",
+			project.ID,
+			payload.ProjectID,
+			payload.IdentityID,
+			payload.SessionID,
+			payload.Operation,
+		)
+
+		response.Error(
+			w,
+			http.StatusUnauthorized,
+			"Invalid authorization code",
+		)
 		return
 	}
 
-	tokens, err := sessions.IssueTokens(r.Context(), h.sessionRepo, h.config.JWTSettings, payload.SessionID, payload.IdentityID, payload.ProjectID)
+	tokens, err := sessions.IssueTokens(
+		r.Context(),
+		h.sessionRepo,
+		h.config.JWTSettings,
+		payload.SessionID,
+		payload.IdentityID,
+		payload.ProjectID,
+	)
 	if err != nil {
-		log.Printf("token exchange issue failed project=%q session=%q identity=%q: %v", project.ID, payload.SessionID, payload.IdentityID, err)
-		response.Error(w, http.StatusInternalServerError, "Failed to issue tokens")
+		log.Printf(
+			"token exchange issue failed project=%q session=%q identity=%q: %v",
+			project.ID,
+			payload.SessionID,
+			payload.IdentityID,
+			err,
+		)
+		response.Error(
+			w,
+			http.StatusInternalServerError,
+			"Failed to issue tokens",
+		)
 		return
 	}
 
@@ -160,7 +245,13 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	log.Printf("token exchange succeeded project=%q identity=%q session=%q", project.ID, tokens.IdentityID, tokens.SessionID)
+	log.Printf(
+		"token exchange succeeded project=%q identity=%q session=%q",
+		project.ID,
+		tokens.IdentityID,
+		tokens.SessionID,
+	)
+
 	response.JSON(w, http.StatusOK, map[string]interface{}{
 		"accessToken": tokens.AccessToken,
 	})

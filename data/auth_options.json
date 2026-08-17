@@ -1,7 +1,0 @@
-[
-  {
-    "key": "email",
-    "label": "Email and password",
-    "description": "Allow users to register and sign in with an email address and password."
-  }
-]

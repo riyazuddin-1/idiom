@@ -3,6 +3,7 @@ package middlewares
 import (
 	"context"
 	"errors"
+	apikeys "idiom-api-services/domains/api_keys"
 	"idiom-api-services/domains/projects"
 	response "idiom-api-services/packages/responses"
 	"log"
@@ -16,6 +17,7 @@ type contextKey string
 
 const authUserContextKey contextKey = "auth_user"
 const projectContextKey contextKey = "project"
+const apiKeyContextKey contextKey = "api_key"
 
 type AuthUser struct {
 	IdentityID string
@@ -44,6 +46,28 @@ func VerifyProject(projectRepo *projects.Repository, w http.ResponseWriter, r *h
 	}
 
 	return r.WithContext(ContextWithProject(r.Context(), project)), nil
+}
+
+func VerifyAPIKey(apiKeyRepo *apikeys.Repository, projectID string, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, errors.New("api key missing")
+	}
+
+	key, err := apikeys.Verify(r.Context(), apiKeyRepo, projectID, apiKey)
+	if err != nil {
+		if errors.Is(err, apikeys.ErrInvalidKey) {
+			response.Error(w, http.StatusUnauthorized, "Unauthorized")
+			return nil, errors.New("invalid api key")
+		}
+
+		log.Printf("api key verification failed project=%q: %v", projectID, err)
+		response.Error(w, http.StatusInternalServerError, "Failed to verify API key")
+		return nil, err
+	}
+
+	return r.WithContext(ContextWithAPIKey(r.Context(), key)), nil
 }
 
 func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
@@ -103,4 +127,13 @@ func ContextWithProject(ctx context.Context, project *projects.Project) context.
 func ProjectFromContext(ctx context.Context) (*projects.Project, bool) {
 	project, ok := ctx.Value(projectContextKey).(*projects.Project)
 	return project, ok && project != nil
+}
+
+func ContextWithAPIKey(ctx context.Context, apiKey *apikeys.APIKey) context.Context {
+	return context.WithValue(ctx, apiKeyContextKey, apiKey)
+}
+
+func APIKeyFromContext(ctx context.Context) (*apikeys.APIKey, bool) {
+	apiKey, ok := ctx.Value(apiKeyContextKey).(*apikeys.APIKey)
+	return apiKey, ok && apiKey != nil
 }

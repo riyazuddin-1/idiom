@@ -34,6 +34,7 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 
 		r, err := middlewares.VerifyUserToken(appConfig.JWTSettings, w, r)
 		if err != nil {
+			response.Message(w, http.StatusOK, "Logout successful")
 			return
 		}
 
@@ -60,8 +61,10 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		switch r.Method {
 		case http.MethodGet:
 			handler.SendPasswordResetHandler(w, r)
+			return
 		case http.MethodPost:
 			handler.UpdatePasswordHandler(w, r)
+			return
 		default:
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
@@ -76,8 +79,10 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		switch r.Method {
 		case http.MethodGet:
 			handler.GetCurrentUserHandler(w, r)
+			return
 		case http.MethodPut:
 			handler.UpdateCurrentUserHandler(w, r)
+			return
 		default:
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
