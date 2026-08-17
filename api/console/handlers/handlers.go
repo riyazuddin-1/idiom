@@ -3,6 +3,7 @@ package handlers
 import (
 	authmiddlewares "idiom-api-services/api/auth/middlewares"
 	"idiom-api-services/api/console/config"
+	apikeys "idiom-api-services/domains/api_keys"
 	"idiom-api-services/domains/org_members"
 	"idiom-api-services/domains/organizations"
 	"idiom-api-services/domains/projects"
@@ -16,6 +17,7 @@ type Handler struct {
 	orgRepo     *organizations.Repository
 	memberRepo  *org_members.Repository
 	projectRepo *projects.Repository
+	apiKeyRepo  *apikeys.Repository
 }
 
 func NewHandler(config config.AppConfig) *Handler {
@@ -24,6 +26,7 @@ func NewHandler(config config.AppConfig) *Handler {
 		orgRepo:     organizations.NewRepository(config.PostgresDB),
 		memberRepo:  org_members.NewRepository(config.PostgresDB),
 		projectRepo: projects.NewRepository(config.PostgresDB),
+		apiKeyRepo:  apikeys.NewRepository(config.PostgresDB),
 	}
 }
 

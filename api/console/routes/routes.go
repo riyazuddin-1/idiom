@@ -102,4 +102,34 @@ func Mount(mux *http.ServeMux, appConfig config.AppConfig) {
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
 	})
+
+	// Project API key routes
+	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.ListProjectAPIKeysHandler(w, r)
+		case http.MethodPost:
+			handler.CreateProjectAPIKeyHandler(w, r)
+		default:
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		}
+	})
+
+	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
+		handler.RevokeProjectAPIKeyHandler(w, r)
+	})
+
+	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}/rotate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
+		handler.RotateProjectAPIKeyHandler(w, r)
+	})
 }
