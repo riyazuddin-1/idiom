@@ -31,13 +31,13 @@ Run the console API normally:
 
 ```bash
 cd idiom/api-services
-go run ./api/console
+go run ./cmd/console
 ```
 
 Example:
 
 ```text
-http://localhost:8080
+http://localhost:8081
 ```
 
 ### React
@@ -68,7 +68,7 @@ export default defineConfig({
 	server: {
 		proxy: {
 			"/api": {
-				target: "http://localhost:8080",
+				target: "http://localhost:8081",
 				changeOrigin: true,
 			},
 		},
@@ -313,3 +313,8 @@ Go Console API :8080
 ```
 
 **React rule:** always use `/api/...` endpoint paths, never environment-specific full URLs.
+
+Done:
+2. Build React console pages — Console shell with sidebar nav, Dashboard, Organizations, Projects pages created.
+3. Fix auth callback — Callback.jsx now uses `authenticate()` from auth.js with same-origin `/api/v1/token`.
+4. Render build config — `render.yaml` created at project root, chains `npm ci && npm run build` in `app/` then `go build ./cmd/console` in `api-services/`.

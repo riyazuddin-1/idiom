@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Idiom</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: #172026;
+            background: #f5f7f8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .auth-shell {
+            width: 100%;
+            max-width: 400px;
+            background: #ffffff;
+            border: 1px solid #dfe6ea;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 16px 40px rgba(23, 32, 38, 0.08);
+        }
+
+        .auth-header {
+            margin-bottom: 24px;
+        }
+
+        .auth-header h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+            line-height: 1.2;
+        }
+
+        .auth-header p {
+            margin: 0;
+            color: #5f6f78;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid #cbd6dc;
+            border-radius: 6px;
+            padding: 0 12px;
+            font-size: 15px;
+            color: #172026;
+            background: #ffffff;
+        }
+
+        input:focus {
+            border-color: #216bff;
+            outline: 3px solid rgba(33, 107, 255, 0.16);
+        }
+
+        button {
+            height: 44px;
+            border: 0;
+            border-radius: 6px;
+            background: #172026;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #26343d;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #5f6f78;
+            font-size: 14px;
+        }
+
+        .auth-footer a {
+            color: #216bff;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .status-message {
+            display: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+
+        .status-message.error {
+            display: block;
+            background: #fef3f2;
+            color: #b42318;
+            border: 1px solid #fecdca;
+        }
+
+        .status-message.success {
+            display: block;
+            background: #f0fdf4;
+            color: #067647;
+            border: 1px solid #abefc6;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-shell">
+        <div class="auth-header">
+            <h1>Welcome back</h1>
+            <p>Sign in to continue to Idiom.</p>
+        </div>
+        <div id="status" class="status-message"></div>
+        <form class="auth-form" id="loginForm" action="/api/v1/{{.ProjectID}}/login" method="POST">
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" type="email" name="email" placeholder="user@example.com" autocomplete="email" required>
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" name="password" placeholder="Password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" id="submitBtn">Log in</button>
+        </form>
+        <div class="auth-footer">
+            No account yet? <a href="/{{.ProjectID}}/register">Create one</a>
+        </div>
+    </div>
+    <script>
+        const form = document.getElementById("loginForm");
+        const statusEl = document.getElementById("status");
+        const submitBtn = document.getElementById("submitBtn");
+
+        function showStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = "status-message " + type;
+        }
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            submitBtn.disabled = true;
+            statusEl.className = "status-message";
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: formData.get("email"),
+                        password: formData.get("password"),
+                    }),
+                    redirect: "follow",
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const code = result.data && result.data.code;
+                    if (code) {
+                        window.location.href = "/api/v1/token?code=" + encodeURIComponent(code) + "&project_id={{.ProjectID}}";
+                        return;
+                    }
+                    showStatus(result.message || "Login successful", "success");
+                } else {
+                    showStatus(result.message || "Login failed", "error");
+                }
+            } catch (err) {
+                showStatus("An unexpected error occurred. Please try again.", "error");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
