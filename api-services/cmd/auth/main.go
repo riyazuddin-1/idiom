@@ -36,6 +36,7 @@ func main() {
 			Username: config.SMTPUsername,
 			Password: config.SMTPPassword,
 			From:     config.SMTPFrom,
+			Security: "starttls",
 		}),
 		AuthBaseURL:        config.AuthBaseURL,
 		VerificationSecret: config.VerificationSecret,
