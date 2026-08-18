@@ -24,6 +24,14 @@ func Mount(mux *http.ServeMux) {
 
 		handlers.RegisterPage(w, r)
 	})
+	mux.HandleFunc("/{project_id}/forgot-password", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
+		handlers.ForgotPasswordPage(w, r)
+	})
 	mux.HandleFunc("/{project_id}/password-reset", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")

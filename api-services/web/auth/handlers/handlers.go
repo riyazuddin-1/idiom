@@ -13,6 +13,10 @@ func RegisterPage(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, r, "web/auth/templates/register.html")
 }
 
+func ForgotPasswordPage(w http.ResponseWriter, r *http.Request) {
+	renderTemplate(w, r, "web/auth/templates/forgot-password.html")
+}
+
 func PasswordResetPage(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, r, "web/auth/templates/password-reset.html")
 }
