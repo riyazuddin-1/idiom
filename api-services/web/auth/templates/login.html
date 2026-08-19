@@ -193,46 +193,8 @@
             statusEl.className = "status-message " + type;
         }
 
-        form.addEventListener("submit", async function (event) {
-            event.preventDefault();
+        form.addEventListener("submit", function () {
             submitBtn.disabled = true;
-            statusEl.className = "status-message";
-
-            const formData = new FormData(form);
-
-            try {
-                const response = await fetch(form.action, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        email: formData.get("email"),
-                        password: formData.get("password"),
-                    }),
-                    redirect: "follow",
-                });
-
-                if (response.redirected) {
-                    window.location.href = response.url;
-                    return;
-                }
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const code = result.data && result.data.code;
-                    if (code) {
-                        window.location.href = "/api/v1/token?code=" + encodeURIComponent(code) + "&project_id={{.ProjectID}}";
-                        return;
-                    }
-                    showStatus(result.message || "Login successful", "success");
-                } else {
-                    showStatus(result.message || "Login failed", "error");
-                }
-            } catch (err) {
-                showStatus("An unexpected error occurred. Please try again.", "error");
-            } finally {
-                submitBtn.disabled = false;
-            }
         });
     </script>
 </body>
