@@ -6,6 +6,7 @@ var (
 	JWTPrivateKey      = os.Getenv("JWT_PRIVATE_KEY")
 	JWTPublicKey       = os.Getenv("JWT_PUBLIC_KEY")
 	AuthBaseURL        = os.Getenv("AUTH_BASE_URL")
+	AllowedOrigins     = os.Getenv("ALLOWED_ORIGINS")
 	VerificationSecret = os.Getenv("VERIFICATION_SECRET")
 	SMTPHost           = os.Getenv("SMTP_HOST")
 	SMTPPort           = os.Getenv("SMTP_PORT")

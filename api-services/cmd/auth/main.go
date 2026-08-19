@@ -8,6 +8,7 @@ import (
 
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
+	"idiom-api-services/api/auth/middlewares"
 	api "idiom-api-services/api/auth/routes"
 	"idiom-api-services/packages/database/postgres"
 	"idiom-api-services/packages/email"
@@ -46,8 +47,9 @@ func main() {
 	webMux := http.NewServeMux()
 	web.Mount(webMux)
 
-	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
-	mux.Handle("/auth/v1/", http.StripPrefix("/auth/v1", apiMux))
+	apiHandler := middlewares.CORS(config.AllowedOrigins, http.StripPrefix("/api/v1", apiMux))
+	mux.Handle("/api/v1/", apiHandler)
+	mux.Handle("/auth/v1/", middlewares.CORS(config.AllowedOrigins, http.StripPrefix("/auth/v1", apiMux)))
 	mux.Handle("/", webMux)
 
 	server := &http.Server{
