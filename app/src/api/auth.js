@@ -1,6 +1,6 @@
 let accessToken = null;
 
-const AUTH_BASE = "/api/v1";
+const AUTH_BASE = "https://idiom-identity.onrender.com/api/v1";
 
 export function getAccessToken() {
   return accessToken;
