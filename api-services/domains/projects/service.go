@@ -110,8 +110,8 @@ func Create(
 		Description:    strings.TrimSpace(input.Description),
 		Status:         "active",
 		AuthOptions:    []string{"email"},
-		RedirectURLs:   input.RedirectURLs,
-		AllowedOrigins: input.AllowedOrigins,
+		RedirectURLs:   nonNilRedirectURLs(input.RedirectURLs),
+		AllowedOrigins: nonNilStrings(input.AllowedOrigins),
 	}
 
 	if err := repo.Create(ctx, project, identityID); err != nil {
@@ -147,9 +147,9 @@ func Update(
 		name,
 		slug,
 		strings.TrimSpace(input.Description),
-		input.AuthOptions,
-		input.RedirectURLs,
-		input.AllowedOrigins,
+		[]string{"email"},
+		nonNilRedirectURLs(input.RedirectURLs),
+		nonNilStrings(input.AllowedOrigins),
 	)
 	if err != nil {
 		return nil, err
@@ -234,4 +234,20 @@ func buildSlug(name string) string {
 	}
 
 	return strings.Trim(builder.String(), "-")
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+
+	return values
+}
+
+func nonNilRedirectURLs(values []RedirectURL) []RedirectURL {
+	if values == nil {
+		return []RedirectURL{}
+	}
+
+	return values
 }
