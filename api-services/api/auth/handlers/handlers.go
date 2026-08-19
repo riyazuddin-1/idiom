@@ -167,7 +167,6 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 	// 		project.ID,
 	// 		err,
 	// 	)
-	// 	return
 	// }
 
 	var payload loginCodeScope
@@ -243,7 +242,7 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/api/v1/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 
 	log.Printf(
@@ -529,7 +528,7 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/api/v1/token/refresh",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 
 	response.OK(w, "Token refreshed successfully", map[string]interface{}{

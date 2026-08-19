@@ -1,6 +1,7 @@
-let accessToken = null;
-
 const AUTH_BASE = "https://idiom-identity.onrender.com/api/v1";
+
+const ACCESS_TOKEN_KEY = "idiom_access_token";
+let accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
 
 export function getAccessToken() {
   return accessToken;
@@ -8,10 +9,15 @@ export function getAccessToken() {
 
 export function setAccessToken(token) {
   accessToken = token;
+  if (token) {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
 }
 
 export function clearAccessToken() {
-  accessToken = null;
+  setAccessToken(null);
 }
 
 export async function authenticate(code) {
