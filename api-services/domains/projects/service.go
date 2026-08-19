@@ -109,7 +109,7 @@ func Create(
 		Slug:           slug,
 		Description:    strings.TrimSpace(input.Description),
 		Status:         "active",
-		AuthOptions:    input.AuthOptions,
+		AuthOptions:    []string{"email"},
 		RedirectURLs:   input.RedirectURLs,
 		AllowedOrigins: input.AllowedOrigins,
 	}
