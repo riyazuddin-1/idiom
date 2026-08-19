@@ -92,9 +92,10 @@ func (r *Repository) Create(
 		INSERT INTO org_members (
 			organization_id,
 			identity_id,
+			role,
 			status
 		) VALUES (
-			$1, $2, 'active'
+			$1, $2, 'owner', 'active'
 		)
 	`,
 		organization.ID,
