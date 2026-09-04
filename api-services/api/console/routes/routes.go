@@ -132,4 +132,13 @@ func Mount(mux *http.ServeMux, appConfig config.AppConfig) {
 
 		handler.RotateProjectAPIKeyHandler(w, r)
 	})
+
+	mux.HandleFunc("/stress-test", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
+		handler.StressTestHandler(w, r)
+	})
 }
