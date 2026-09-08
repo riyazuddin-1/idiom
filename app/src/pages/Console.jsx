@@ -1,8 +1,19 @@
+import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { getAccessToken, clearAccessToken } from "../api/auth";
+import {
+  clearAccessToken,
+  isAuthenticated,
+  isMockAuthEnabled,
+} from "../api/auth";
 
 const Console = ({ onLogin }) => {
-  const isLoggedIn = !!getAccessToken();
+  const isLoggedIn = isAuthenticated();
+
+  useEffect(() => {
+    if (!isLoggedIn && !isMockAuthEnabled() && typeof onLogin === "function") {
+      onLogin();
+    }
+  }, [isLoggedIn, onLogin]);
 
   const handleLogout = () => {
     clearAccessToken();
@@ -11,14 +22,8 @@ const Console = ({ onLogin }) => {
 
   if (!isLoggedIn) {
     return (
-      <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
-        <h2>Welcome to Idiom</h2>
-        <p style={{ color: "var(--text)", margin: "12px 0 24px" }}>
-          Sign in to access your console.
-        </p>
-        <button className="btn btn-primary" onClick={onLogin}>
-          Sign In
-        </button>
+      <div className="auth-redirect-state">
+        <h2>Redirecting to sign in…</h2>
       </div>
     );
   }

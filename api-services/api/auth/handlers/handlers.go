@@ -461,20 +461,6 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	response.OK(w, "Password updated successfully", nil)
 }
 
-func (h *Handler) GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
-	if user, ok := middlewares.UserFromContext(r.Context()); ok {
-		log.Printf("current user read requested project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
-	}
-	// Implement logic to get current user information here
-}
-
-func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
-	if user, ok := middlewares.UserFromContext(r.Context()); ok {
-		log.Printf("current user update requested project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
-	}
-	// Implement logic to update current user information here
-}
-
 // Session management
 func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var refreshTokenValue string
@@ -537,4 +523,17 @@ func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// OAuth
+// User
+func (h *Handler) GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
+	if user, ok := middlewares.UserFromContext(r.Context()); ok {
+		log.Printf("current user read requested project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
+	}
+	// Implement logic to get current user information here
+}
+
+func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
+	if user, ok := middlewares.UserFromContext(r.Context()); ok {
+		log.Printf("current user update requested project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
+	}
+	// Implement logic to update current user information here
+}
