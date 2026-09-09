@@ -47,15 +47,6 @@ const Projects = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <Link
-          to="/console/organizations"
-          style={{ fontSize: 14, color: "var(--text)" }}
-        >
-          &larr; Organizations
-        </Link>
-      </div>
-
       <h2>Projects</h2>
 
       <div className="toolbar">

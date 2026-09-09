@@ -4,7 +4,6 @@ import Callback from "./pages/Callback";
 import Console from "./pages/Console";
 import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/Home";
-import Organizations from "./pages/Organizations";
 import Projects from "./pages/Projects";
 import "./App.css";
 
@@ -34,7 +33,6 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="organizations" element={<Organizations />} />
             <Route path="organizations/:oid/projects" element={<Projects />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
