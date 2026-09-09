@@ -1,0 +1,51 @@
+.floating-field {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.floating-field input {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 16px 14px;
+  border: 1px solid;
+  border-radius: 8px;
+
+  font-size: 16px;
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Label starts inside the input */
+.floating-field label {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  padding: 0 4px;
+
+  font-size: 16px;
+  pointer-events: none;
+
+  transition:
+    top 0.2s ease,
+    transform 0.2s ease,
+    font-size 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Move label up when focused */
+.floating-field input:focus + label,
+
+/* Keep it up when the input has content */
+.floating-field input:not(:placeholder-shown) + label {
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 12px;
+}

@@ -92,30 +92,30 @@ const HomePage = () => {
                   <div className="project-card">
                     <div className="project-icon">W</div>
                     <h4>Web App</h4>
-                    <p>notelet.vercel.app</p>
+                    <p>notelet</p>
                     <div className="project-status">
                       <span className="status-dot" />
-                      Production
+                      Active
                     </div>
                   </div>
 
                   <div className="project-card">
                     <div className="project-icon">M</div>
                     <h4>Mobile App</h4>
-                    <p>iOS & Android</p>
+                    <p>noteletmobile</p>
                     <div className="project-status">
                       <span className="status-dot" />
-                      Production
+                      Active
                     </div>
                   </div>
 
                   <div className="project-card">
                     <div className="project-icon">A</div>
                     <h4>Admin Portal</h4>
-                    <p>admin.northstar.dev</p>
+                    <p>noteletadmin</p>
                     <div className="project-status">
                       <span className="status-dot" />
-                      Production
+                      Active
                     </div>
                   </div>
                 </div>

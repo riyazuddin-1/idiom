@@ -8,6 +8,7 @@ import {
 
 import "../styles/Console.css";
 import useFetch from "../hooks/useFetch";
+import FloatingInput from "../components/FloatingInput";
 
 const Organizations = ({ setOrganization, setToggleOrganization }) => {
   const {
@@ -61,22 +62,21 @@ const Organizations = ({ setOrganization, setToggleOrganization }) => {
       className="organizations-layout"
       onClick={() => setToggleOrganization(false)}
     >
-      <div className="organizations-container" onClick={() => {}}>
+      <div
+        className="organizations-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2>Organizations</h2>
 
         {showForm && (
           <form onSubmit={handleCreate} style={{ marginBottom: 20 }}>
             <div className="form-row">
               <div className="form-field">
-                <label htmlFor="org-name">Name</label>
-                <input
+                <FloatingInput
                   id="org-name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Organization name"
-                  onKeyDown={handleKeyDown}
+                  label="Organization name"
                   required
+                  autoFocus
                 />
               </div>
             </div>
@@ -102,7 +102,7 @@ const Organizations = ({ setOrganization, setToggleOrganization }) => {
           organizations.length > 0 && (
             <ul className="organizations-list">
               {organizations.map((org) => (
-                <li key={org.slug} onClick={() => setOrganization(org)}>
+                <li key={org.id} onClick={() => setOrganization(org)}>
                   {org.name}
                 </li>
               ))}
@@ -165,10 +165,11 @@ const Console = ({ onLogin }) => {
               </h1>
             </div>
             <nav className="sidebar-nav">
-              <NavLink to="/console" end>
-                Overview
+              <NavLink
+                to={`/console/organizations/${organization.id}/projects`}
+              >
+                Projects
               </NavLink>
-              <NavLink to={`/console/organizations/${organization.id}/projects`}>Projects</NavLink>
             </nav>
             <div className="sidebar-footer">
               <button onClick={handleLogout}>Log out</button>

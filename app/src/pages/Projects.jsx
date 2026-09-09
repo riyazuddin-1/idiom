@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import useFetch from "../hooks/useFetch";
 import apiFetch from "../api/client";
+import "../styles/Projects.css";
+import FloatingInput from "../components/FloatingInput";
 
 const Projects = () => {
   const { oid } = useParams();
@@ -38,43 +40,45 @@ const Projects = () => {
       setName("");
       setShowForm(false);
       refetch();
-    } catch (err) {
+    } catch {
       setFormError("Failed to create project.");
     } finally {
       setCreating(false);
     }
   };
 
-  return (
-    <div>
-      <h2>Projects</h2>
+  const statusLabel = (status) => {
+    if (!status) return "Active";
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
 
-      <div className="toolbar">
-        <span />
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "New Project"}
+  const projectSub = (project) =>
+    project.slug || new Date(project.createdAt).toLocaleDateString();
+
+  return (
+    <div className="projects-page">
+      <div className="projects-header">
+        <div>
+          <h2>Projects</h2>
+          <p>Each product gets a dedicated auth workspace.</p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? "Cancel" : "+ New project"}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} style={{ marginBottom: 20 }}>
-          <div className="form-row">
-            <div className="form-field">
-              <label htmlFor="project-name">Name</label>
-              <input
-                id="project-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Project name"
-                required
-              />
-            </div>
-            <button className="btn btn-primary" type="submit" disabled={creating}>
-              {creating ? "Creating..." : "Create"}
-            </button>
-          </div>
-          {formError && <p className="error" style={{ marginTop: 8 }}>{formError}</p>}
+        <form onSubmit={handleCreate} className="projects-form">
+          <FloatingInput
+            id="project-name"
+            label="Project name"
+            required
+            autoFocus
+          />
+          {formError && <p className="error">{formError}</p>}
         </form>
       )}
 
@@ -86,27 +90,20 @@ const Projects = () => {
       )}
 
       {!loading && !error && projects && projects.length > 0 && (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <tr key={project.id}>
-                  <td>{project.name}</td>
-                  <td>
-                    <span className="badge">{project.status || "active"}</span>
-                  </td>
-                  <td>{new Date(project.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="projects-grid">
+          {projects.map((project) => (
+            <div className="project-tile" key={project.id}>
+              <div className="project-tile-icon">
+                {(project.name || "?").charAt(0).toUpperCase()}
+              </div>
+              <h4>{project.name}</h4>
+              <p>{projectSub(project)}</p>
+              <div className="project-tile-status">
+                <span className="status-dot" />
+                {statusLabel(project.status)}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

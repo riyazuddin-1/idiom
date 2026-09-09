@@ -20,12 +20,14 @@ const defaultData = {
       {
         id: "proj-web",
         name: "Web App",
+        slug: "notelet",
         status: "active",
         createdAt: "2025-03-02T10:00:00.000Z",
       },
       {
         id: "proj-admin",
         name: "Admin Portal",
+        slug: "noteletadmin",
         status: "active",
         createdAt: "2025-03-15T11:00:00.000Z",
       },
@@ -34,6 +36,7 @@ const defaultData = {
       {
         id: "proj-mobile",
         name: "Mobile App",
+        slug: "noteletmobile",
         status: "active",
         createdAt: "2025-04-18T09:00:00.000Z",
       },
