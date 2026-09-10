@@ -236,3 +236,73 @@ func (h *Handler) RevokeProjectAPIKeyHandler(w http.ResponseWriter, r *http.Requ
 
 	response.NoContent(w)
 }
+
+func (h *Handler) UpdateProjectAPIKeyHandler(w http.ResponseWriter, r *http.Request) {
+	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
+	if err != nil {
+		log.Printf("console api key update failed: unauthorized: %v", err)
+		return
+	}
+
+	user, ok := authmiddlewares.UserFromContext(r.Context())
+	if !ok {
+		log.Printf("console api key update failed: missing authenticated user")
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	projectID := r.PathValue("pid")
+	apiKeyID := r.PathValue("kid")
+
+	if projectID == "" || apiKeyID == "" {
+		response.Error(w, http.StatusBadRequest, "Project ID and API key ID are required")
+		return
+	}
+
+	var req apikeys.UpdateInput
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	apiKey, err := apikeys.Update(
+		r.Context(),
+		h.apiKeyRepo,
+		projectID,
+		user.IdentityID,
+		apiKeyID,
+		req,
+	)
+	if err != nil {
+		log.Printf(
+			"console api key update failed identity=%q project=%q key=%q: %v",
+			user.IdentityID,
+			projectID,
+			apiKeyID,
+			err,
+		)
+
+		if errors.Is(err, apikeys.ErrNameRequired) {
+			response.Error(w, http.StatusBadRequest, "API key name is required")
+			return
+		}
+
+		if errors.Is(err, apikeys.ErrNotFound) {
+			response.Error(w, http.StatusNotFound, "API key not found")
+			return
+		}
+
+		response.Error(w, http.StatusInternalServerError, "Failed to update API key")
+		return
+	}
+
+	log.Printf(
+		"console api key update succeeded identity=%q project=%q key=%q",
+		user.IdentityID,
+		projectID,
+		apiKeyID,
+	)
+
+	response.OK(w, "API key updated", apiKey)
+}

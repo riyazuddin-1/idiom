@@ -5,6 +5,127 @@ import apiFetch from "../api/client";
 import "../styles/Project.css";
 import FloatingInput from "../components/FloatingInput";
 
+const ProjectSettings = ({ organization, project, onUpdated }) => {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await apiFetch(
+        `/api/v1/organizations/${organization.id}/projects/${project.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, description }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setError(result.message);
+        return;
+      }
+
+      setEditing(false);
+      onUpdated(result.data);
+    } catch {
+      setError("Failed to update project.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setName(project.name);
+    setDescription(project.description || "");
+    setError(null);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="section">
+        <div className="section-header">
+          <h3>Settings</h3>
+        </div>
+        <form onSubmit={handleSave} className="section-form">
+          <div className="form-row">
+            <div className="form-field">
+              <FloatingInput
+                id="edit-project-name"
+                label="Project name"
+                required
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="form-row" style={{ marginTop: 12 }}>
+            <div className="form-field" style={{ width: "100%" }}>
+              <FloatingInput
+                id="edit-project-desc"
+                label="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}
+          <div className="form-actions" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="section">
+      <div className="section-header">
+        <div>
+          <h3>Settings</h3>
+          <p>Project name and description.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setEditing(true)}>
+          Edit
+        </button>
+      </div>
+      <div className="settings-display">
+        <div className="settings-row">
+          <span className="settings-label">Name</span>
+          <span>{project.name}</span>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Description</span>
+          <span>{project.description || "—"}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ApiKeysSection = ({ organization, project }) => {
   const {
     data: apiKeys,
@@ -22,6 +143,9 @@ const ApiKeysSection = ({ organization, project }) => {
   const [formError, setFormError] = useState(null);
   const [newKey, setNewKey] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editScopes, setEditScopes] = useState("");
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -104,6 +228,48 @@ const ApiKeysSection = ({ organization, project }) => {
       refetch();
     } catch {
       alert("Failed to revoke API key.");
+    }
+  };
+
+  const startEdit = (key) => {
+    setEditingId(key.id);
+    setEditName(key.name);
+    setEditScopes((key.scopes || []).join(", "));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditScopes("");
+  };
+
+  const handleEditSave = async (keyId) => {
+    const scopeList = editScopes
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    try {
+      const response = await apiFetch(
+        `/api/v1/organizations/${organization.id}/projects/${project.id}/api-keys/${keyId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: editName, scopes: scopeList }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
+
+      cancelEdit();
+      refetch();
+    } catch {
+      alert("Failed to update API key.");
     }
   };
 
@@ -199,30 +365,65 @@ const ApiKeysSection = ({ organization, project }) => {
             <span>Created</span>
             <span>Actions</span>
           </div>
-          {apiKeys.map((key) => (
-            <div className="keys-list-row" key={key.id}>
-              <span>{key.name}</span>
-              <span className="keys-prefix">
-                <code>{key.key_prefix}...</code>
-              </span>
-              <span>
-                {key.is_active ? (
-                  <span className="key-status-active">Active</span>
-                ) : (
-                  <span className="key-status-revoked">Revoked</span>
-                )}
-              </span>
-              <span>{formatDate(key.created_at)}</span>
-              <span className="keys-actions">
-                {key.is_active && (
-                  <>
-                    <button onClick={() => handleRotate(key.id)}>Rotate</button>
-                    <button onClick={() => handleRevoke(key.id)}>Revoke</button>
-                  </>
-                )}
-              </span>
-            </div>
-          ))}
+          {apiKeys.map((key) =>
+            editingId === key.id ? (
+              <div className="keys-list-row keys-edit-row" key={key.id}>
+                <span>
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="keys-inline-input"
+                  />
+                </span>
+                <span className="keys-prefix">
+                  <code>{key.key_prefix}...</code>
+                </span>
+                <span>
+                  {key.is_active ? (
+                    <span className="key-status-active">Active</span>
+                  ) : (
+                    <span className="key-status-revoked">Revoked</span>
+                  )}
+                </span>
+                <span>
+                  <input
+                    value={editScopes}
+                    onChange={(e) => setEditScopes(e.target.value)}
+                    className="keys-inline-input"
+                    placeholder="read, write"
+                  />
+                </span>
+                <span className="keys-actions">
+                  <button onClick={() => handleEditSave(key.id)}>Save</button>
+                  <button onClick={cancelEdit}>Cancel</button>
+                </span>
+              </div>
+            ) : (
+              <div className="keys-list-row" key={key.id}>
+                <span>{key.name}</span>
+                <span className="keys-prefix">
+                  <code>{key.key_prefix}...</code>
+                </span>
+                <span>
+                  {key.is_active ? (
+                    <span className="key-status-active">Active</span>
+                  ) : (
+                    <span className="key-status-revoked">Revoked</span>
+                  )}
+                </span>
+                <span>{formatDate(key.created_at)}</span>
+                <span className="keys-actions">
+                  {key.is_active && (
+                    <>
+                      <button onClick={() => startEdit(key)}>Edit</button>
+                      <button onClick={() => handleRotate(key.id)}>Rotate</button>
+                      <button onClick={() => handleRevoke(key.id)}>Revoke</button>
+                    </>
+                  )}
+                </span>
+              </div>
+            ),
+          )}
         </div>
       )}
     </div>
@@ -235,6 +436,7 @@ const Project = ({ organization }) => {
     data: project,
     loading,
     error,
+    refetch,
   } = useFetch(`/api/v1/organizations/${organization.id}/projects/${pid}`);
 
   if (loading) {
@@ -271,6 +473,12 @@ const Project = ({ organization }) => {
           <p>{project.slug || project.id}</p>
         </div>
       </div>
+
+      <ProjectSettings
+        organization={organization}
+        project={project}
+        onUpdated={() => refetch()}
+      />
 
       <ApiKeysSection organization={organization} project={project} />
     </div>

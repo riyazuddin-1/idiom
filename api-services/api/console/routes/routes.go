@@ -116,12 +116,16 @@ func Mount(mux *http.ServeMux, appConfig config.AppConfig) {
 	})
 
 	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete {
-			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		switch r.Method {
+		case http.MethodPut:
+			handler.UpdateProjectAPIKeyHandler(w, r)
 			return
+		case http.MethodDelete:
+			handler.RevokeProjectAPIKeyHandler(w, r)
+			return
+		default:
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
-
-		handler.RevokeProjectAPIKeyHandler(w, r)
 	})
 
 	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}/rotate", func(w http.ResponseWriter, r *http.Request) {

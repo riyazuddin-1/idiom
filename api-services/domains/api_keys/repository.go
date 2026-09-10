@@ -237,6 +237,73 @@ func (r *Repository) Revoke(
 	return nil
 }
 
+func (r *Repository) Update(
+	ctx context.Context,
+	apiKeyID string,
+	projectID string,
+	identityID string,
+	name string,
+	scopes []string,
+) (*APIKey, error) {
+	row := r.db.QueryRow(ctx, `
+		UPDATE api_keys ak
+		SET
+			name = $4,
+			scopes = $5
+		WHERE ak.id = $1
+			AND ak.project_id = $2
+			AND EXISTS (
+				SELECT 1
+				FROM projects p
+				INNER JOIN org_members om
+					ON om.organization_id = p.organization_id
+				WHERE p.id = ak.project_id
+					AND om.identity_id = $3
+					AND om.status = 'active'
+			)
+		RETURNING
+			ak.id,
+			ak.name,
+			ak.project_id,
+			ak.key_prefix,
+			ak.key_hash,
+			COALESCE(ak.scopes, ARRAY[]::text[]),
+			ak.is_active,
+			ak.created_by,
+			ak.created_at,
+			ak.revoked_at
+	`,
+		apiKeyID,
+		projectID,
+		identityID,
+		name,
+		scopes,
+	)
+
+	var apiKey APIKey
+
+	if err := row.Scan(
+		&apiKey.ID,
+		&apiKey.Name,
+		&apiKey.ProjectID,
+		&apiKey.KeyPrefix,
+		&apiKey.KeyHash,
+		&apiKey.Scopes,
+		&apiKey.IsActive,
+		&apiKey.CreatedBy,
+		&apiKey.CreatedAt,
+		&apiKey.RevokedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return &apiKey, nil
+}
+
 func (r *Repository) GetActiveByPrefix(
 	ctx context.Context,
 	projectID string,

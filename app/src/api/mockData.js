@@ -210,6 +210,30 @@ export function mockRevokeApiKey(projectId, keyId) {
   return apiKey;
 }
 
+export function mockUpdateProject(organizationId, projectId, updates) {
+  const data = readStorage();
+  const projects = data.projects[organizationId] || [];
+  const index = projects.findIndex((p) => p.id === projectId);
+  if (index === -1) return null;
+
+  const project = { ...projects[index], ...updates };
+  data.projects[organizationId][index] = project;
+  saveStorage(data);
+  return project;
+}
+
+export function mockUpdateApiKey(projectId, keyId, updates) {
+  const data = readStorage();
+  const keys = data.apiKeys[projectId] || [];
+  const index = keys.findIndex((k) => k.id === keyId);
+  if (index === -1) return null;
+
+  const apiKey = { ...keys[index], ...updates };
+  data.apiKeys[projectId][index] = apiKey;
+  saveStorage(data);
+  return apiKey;
+}
+
 export function resetMockData() {
   localStorage.removeItem(STORAGE_KEY);
 }

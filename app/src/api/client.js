@@ -9,6 +9,8 @@ import {
   getMockProjects,
   mockRevokeApiKey,
   mockRotateApiKey,
+  mockUpdateApiKey,
+  mockUpdateProject,
 } from "./mockData";
 
 function mockJsonResponse(data, status = 200) {
@@ -54,6 +56,15 @@ function mockApiFetch(url, options = {}) {
     return mockJsonResponse(project);
   }
 
+  if (projectMatch && method === "PUT") {
+    const organizationId = projectMatch[1];
+    const projectId = projectMatch[2];
+    const body = JSON.parse(options.body || "{}");
+    const project = mockUpdateProject(organizationId, projectId, body);
+    if (!project) return mockJsonResponse({ message: "Project not found" }, 404);
+    return mockJsonResponse(project);
+  }
+
   const apiKeysListMatch = path.match(
     /^\/api\/v1\/organizations\/[^/]+\/projects\/([^/]+)\/api-keys$/,
   );
@@ -82,6 +93,15 @@ function mockApiFetch(url, options = {}) {
   const apiKeyRevokeMatch = path.match(
     /^\/api\/v1\/organizations\/[^/]+\/projects\/([^/]+)\/api-keys\/([^/]+)$/,
   );
+  if (apiKeyRevokeMatch && method === "PUT") {
+    const projectId = apiKeyRevokeMatch[1];
+    const keyId = apiKeyRevokeMatch[2];
+    const body = JSON.parse(options.body || "{}");
+    const result = mockUpdateApiKey(projectId, keyId, body);
+    if (!result) return mockJsonResponse({ message: "API key not found" }, 404);
+    return mockJsonResponse(result);
+  }
+
   if (apiKeyRevokeMatch && method === "DELETE") {
     const projectId = apiKeyRevokeMatch[1];
     const keyId = apiKeyRevokeMatch[2];

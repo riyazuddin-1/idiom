@@ -21,6 +21,11 @@ type CreateInput struct {
 	Scopes []string `json:"scopes"`
 }
 
+type UpdateInput struct {
+	Name   string   `json:"name"`
+	Scopes []string `json:"scopes"`
+}
+
 type CreateResult struct {
 	APIKey *APIKey `json:"api_key"`
 	Key    string  `json:"key"`
@@ -155,6 +160,34 @@ func Revoke(
 		projectID,
 		identityID,
 	)
+}
+
+func Update(
+	ctx context.Context,
+	repo *Repository,
+	projectID string,
+	identityID string,
+	apiKeyID string,
+	input UpdateInput,
+) (*APIKey, error) {
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return nil, ErrNameRequired
+	}
+
+	apiKey, err := repo.Update(
+		ctx,
+		apiKeyID,
+		projectID,
+		identityID,
+		name,
+		input.Scopes,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiKey, nil
 }
 
 func generateKey() (string, string, string, error) {

@@ -92,6 +92,49 @@
   gap: 4px;
 }
 
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-cancel {
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  border-color: var(--accent-border);
+}
+
+.settings-display {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.settings-row {
+  display: flex;
+  gap: 16px;
+  padding: 12px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  min-width: 100px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
 .new-key-banner {
   padding: 16px;
   margin-bottom: 20px;
@@ -211,6 +254,26 @@
 
 .keys-actions button:hover {
   border-color: var(--accent-border);
+}
+
+.keys-edit-row {
+  background: var(--code-bg);
+}
+
+.keys-inline-input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.keys-inline-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 @media (max-width: 640px) {
