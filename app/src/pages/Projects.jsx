@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import useFetch from "../hooks/useFetch";
 import apiFetch from "../api/client";
 import "../styles/Projects.css";
@@ -91,7 +91,11 @@ const Projects = ({organization}) => {
       {!loading && !error && projects && projects.length > 0 && (
         <div className="projects-grid">
           {projects.map((project) => (
-            <div className="project-tile" key={project.id}>
+            <Link
+              to={`/console/projects/${project.id}`}
+              className="project-tile"
+              key={project.id}
+            >
               <div className="project-tile-icon">
                 {(project.name || "?").charAt(0).toUpperCase()}
               </div>
@@ -101,7 +105,7 @@ const Projects = ({organization}) => {
                 <span className="status-dot" />
                 {statusLabel(project.status)}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

@@ -1,9 +1,14 @@
 import { getAccessToken, isMockAuthEnabled, reAuthenticate } from "./auth";
 import {
+  addMockApiKey,
   addMockOrganization,
   addMockProject,
+  getMockApiKeys,
   getMockOrganizations,
+  getMockProject,
   getMockProjects,
+  mockRevokeApiKey,
+  mockRotateApiKey,
 } from "./mockData";
 
 function mockJsonResponse(data, status = 200) {
@@ -36,6 +41,52 @@ function mockApiFetch(url, options = {}) {
     const organizationId = projectsMatch[1];
     const body = JSON.parse(options.body || "{}");
     return mockJsonResponse(addMockProject(organizationId, body.name));
+  }
+
+  const projectMatch = path.match(
+    /^\/api\/v1\/organizations\/([^/]+)\/projects\/([^/]+)$/,
+  );
+  if (projectMatch && method === "GET") {
+    const organizationId = projectMatch[1];
+    const projectId = projectMatch[2];
+    const project = getMockProject(organizationId, projectId);
+    if (!project) return mockJsonResponse({ message: "Project not found" }, 404);
+    return mockJsonResponse(project);
+  }
+
+  const apiKeysListMatch = path.match(
+    /^\/api\/v1\/organizations\/[^/]+\/projects\/([^/]+)\/api-keys$/,
+  );
+  if (apiKeysListMatch && method === "GET") {
+    const projectId = apiKeysListMatch[1];
+    return mockJsonResponse(getMockApiKeys(projectId));
+  }
+
+  if (apiKeysListMatch && method === "POST") {
+    const projectId = apiKeysListMatch[1];
+    const body = JSON.parse(options.body || "{}");
+    return mockJsonResponse(addMockApiKey(projectId, body.name, body.scopes), 201);
+  }
+
+  const apiKeyRotateMatch = path.match(
+    /^\/api\/v1\/organizations\/[^/]+\/projects\/([^/]+)\/api-keys\/([^/]+)\/rotate$/,
+  );
+  if (apiKeyRotateMatch && method === "POST") {
+    const projectId = apiKeyRotateMatch[1];
+    const keyId = apiKeyRotateMatch[2];
+    const result = mockRotateApiKey(projectId, keyId);
+    if (!result) return mockJsonResponse({ message: "Key not found" }, 404);
+    return mockJsonResponse(result);
+  }
+
+  const apiKeyRevokeMatch = path.match(
+    /^\/api\/v1\/organizations\/[^/]+\/projects\/([^/]+)\/api-keys\/([^/]+)$/,
+  );
+  if (apiKeyRevokeMatch && method === "DELETE") {
+    const projectId = apiKeyRevokeMatch[1];
+    const keyId = apiKeyRevokeMatch[2];
+    mockRevokeApiKey(projectId, keyId);
+    return new Response(null, { status: 204 });
   }
 
   return mockJsonResponse([], 404);

@@ -10,6 +10,7 @@ import {
 import "../styles/Console.css";
 import useFetch from "../hooks/useFetch";
 import Projects from "./Projects";
+import Project from "./Project";
 import FloatingInput from "../components/FloatingInput";
 
 const Organizations = ({
@@ -194,7 +195,11 @@ const Console = ({ onLogin }) => {
             </div>
 
             <nav className="sidebar-nav">
+              {/* <NavLink to="/console/dashboard">Overview</NavLink> */}
               <NavLink to="/console/projects">Projects</NavLink>
+              {/* <hr/>
+              <NavLink to="/console/organization">Workspace</NavLink>
+              <NavLink to="/console/me">Me</NavLink> */}
             </nav>
 
             <div className="sidebar-footer">
@@ -207,6 +212,10 @@ const Console = ({ onLogin }) => {
               <Route
                 path="/projects"
                 element={<Projects organization={organization} />}
+              />
+              <Route
+                path="/projects/:pid"
+                element={<Project organization={organization} />}
               />
             </Routes>
           </main>

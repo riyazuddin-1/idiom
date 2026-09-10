@@ -75,6 +75,14 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.project-tile:hover {
+  border-color: var(--accent-border);
+  text-decoration: none;
 }
 
 .project-tile-icon {

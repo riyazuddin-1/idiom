@@ -1,0 +1,280 @@
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import useFetch from "../hooks/useFetch";
+import apiFetch from "../api/client";
+import "../styles/Project.css";
+import FloatingInput from "../components/FloatingInput";
+
+const ApiKeysSection = ({ organization, project }) => {
+  const {
+    data: apiKeys,
+    loading,
+    error,
+    refetch,
+  } = useFetch(
+    `/api/v1/organizations/${organization.id}/projects/${project.id}/api-keys`,
+  );
+
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [scopes, setScopes] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [formError, setFormError] = useState(null);
+  const [newKey, setNewKey] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setFormError(null);
+    setNewKey(null);
+
+    try {
+      const scopeList = scopes
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const response = await apiFetch(
+        `/api/v1/organizations/${organization.id}/projects/${project.id}/api-keys`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, scopes: scopeList }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setFormError(result.message);
+        return;
+      }
+
+      setNewKey(result.data.key);
+      setName("");
+      setScopes("");
+      setShowForm(false);
+      refetch();
+    } catch {
+      setFormError("Failed to create API key.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRotate = async (keyId) => {
+    if (!window.confirm("Rotate this key? The old key will stop working immediately.")) return;
+
+    try {
+      const response = await apiFetch(
+        `/api/v1/organizations/${organization.id}/projects/${project.id}/api-keys/${keyId}/rotate`,
+        { method: "POST" },
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
+
+      setNewKey(result.data.key);
+      refetch();
+    } catch {
+      alert("Failed to rotate API key.");
+    }
+  };
+
+  const handleRevoke = async (keyId) => {
+    if (!window.confirm("Revoke this key? This cannot be undone.")) return;
+
+    try {
+      const response = await apiFetch(
+        `/api/v1/organizations/${organization.id}/projects/${project.id}/api-keys/${keyId}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok && response.status !== 204) {
+        const result = await response.json();
+        alert(result.message || "Failed to revoke API key.");
+        return;
+      }
+
+      refetch();
+    } catch {
+      alert("Failed to revoke API key.");
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  return (
+    <div className="section">
+      <div className="section-header">
+        <div>
+          <h3>API Keys</h3>
+          <p>Authenticate server-side requests to your project.</p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setShowForm(!showForm);
+            setNewKey(null);
+          }}
+        >
+          {showForm ? "Cancel" : "+ New key"}
+        </button>
+      </div>
+
+      {newKey && (
+        <div className="new-key-banner">
+          <h4>Key created</h4>
+          <p>Copy this key now. You won't be able to see it again.</p>
+          <div className="new-key-row">
+            <code>{newKey}</code>
+            <button onClick={() => copyToClipboard(newKey)}>
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="section-form">
+          <div className="form-row">
+            <div className="form-field">
+              <FloatingInput
+                id="key-name"
+                label="Key name"
+                required
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="form-field">
+              <FloatingInput
+                id="key-scopes"
+                label="Scopes (comma-separated, optional)"
+                value={scopes}
+                onChange={(e) => setScopes(e.target.value)}
+              />
+            </div>
+          </div>
+          {formError && <p className="error">{formError}</p>}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={creating}
+            style={{ marginTop: 12 }}
+          >
+            {creating ? "Creating..." : "Create key"}
+          </button>
+        </form>
+      )}
+
+      {loading && <div className="loading">Loading...</div>}
+      {error && <div className="error">Failed to load API keys.</div>}
+
+      {!loading && !error && apiKeys && apiKeys.length === 0 && (
+        <div className="empty">No API keys yet. Create one to get started.</div>
+      )}
+
+      {!loading && !error && apiKeys && apiKeys.length > 0 && (
+        <div className="keys-list">
+          <div className="keys-list-header">
+            <span>Name</span>
+            <span>Prefix</span>
+            <span>Status</span>
+            <span>Created</span>
+            <span>Actions</span>
+          </div>
+          {apiKeys.map((key) => (
+            <div className="keys-list-row" key={key.id}>
+              <span>{key.name}</span>
+              <span className="keys-prefix">
+                <code>{key.key_prefix}...</code>
+              </span>
+              <span>
+                {key.is_active ? (
+                  <span className="key-status-active">Active</span>
+                ) : (
+                  <span className="key-status-revoked">Revoked</span>
+                )}
+              </span>
+              <span>{formatDate(key.created_at)}</span>
+              <span className="keys-actions">
+                {key.is_active && (
+                  <>
+                    <button onClick={() => handleRotate(key.id)}>Rotate</button>
+                    <button onClick={() => handleRevoke(key.id)}>Revoke</button>
+                  </>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Project = ({ organization }) => {
+  const { pid } = useParams();
+  const {
+    data: project,
+    loading,
+    error,
+  } = useFetch(`/api/v1/organizations/${organization.id}/projects/${pid}`);
+
+  if (loading) {
+    return (
+      <div className="project-page">
+        <div className="loading">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <div className="project-page">
+        <Link to="/console/projects" className="btn-back">
+          &larr; Projects
+        </Link>
+        <div className="error">Failed to load project.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="project-page">
+      <Link to="/console/projects" className="btn-back">
+        &larr; Projects
+      </Link>
+
+      <div className="project-header">
+        <div className="project-icon">
+          {(project.name || "?").charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <h2>{project.name}</h2>
+          <p>{project.slug || project.id}</p>
+        </div>
+      </div>
+
+      <ApiKeysSection organization={organization} project={project} />
+    </div>
+  );
+};
+
+export default Project;

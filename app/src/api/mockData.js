@@ -42,6 +42,44 @@ const defaultData = {
       },
     ],
   },
+  apiKeys: {
+    "proj-web": [
+      {
+        id: "ak-1",
+        name: "Staging",
+        project_id: "proj-web",
+        key_prefix: "ik_AbCdEfGhI",
+        scopes: ["read", "write"],
+        is_active: true,
+        created_by: "user-1",
+        created_at: "2025-03-03T10:00:00.000Z",
+      },
+      {
+        id: "ak-2",
+        name: "CI/CD Bot",
+        project_id: "proj-web",
+        key_prefix: "ik_012345678",
+        scopes: ["read"],
+        is_active: false,
+        created_by: "user-1",
+        created_at: "2025-06-10T12:00:00.000Z",
+        revoked_at: "2025-08-01T09:00:00.000Z",
+      },
+    ],
+    "proj-admin": [],
+    "proj-mobile": [
+      {
+        id: "ak-3",
+        name: "Production",
+        project_id: "proj-mobile",
+        key_prefix: "ik_ZyXwVuTsR",
+        scopes: ["read", "write"],
+        is_active: true,
+        created_by: "user-1",
+        created_at: "2025-04-20T09:00:00.000Z",
+      },
+    ],
+  },
 };
 
 function readStorage() {
@@ -65,6 +103,12 @@ export function getMockOrganizations() {
 export function getMockProjects(organizationId) {
   const data = readStorage();
   return [...(data.projects[organizationId] || [])];
+}
+
+export function getMockProject(organizationId, projectId) {
+  const data = readStorage();
+  const projects = data.projects[organizationId] || [];
+  return projects.find((p) => p.id === projectId) || null;
 }
 
 export function addMockOrganization(name) {
@@ -98,6 +142,72 @@ export function addMockProject(organizationId, name) {
   data.projects[organizationId] = [project, ...data.projects[organizationId]];
   saveStorage(data);
   return project;
+}
+
+export function getMockApiKeys(projectId) {
+  const data = readStorage();
+  return [...(data.apiKeys[projectId] || [])];
+}
+
+export function addMockApiKey(projectId, name, scopes) {
+  const data = readStorage();
+  const keyId = `ak-${Date.now()}`;
+  const key = `ik_${btoa(`${keyId}${Date.now()}`)
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 32)}`;
+
+  const apiKey = {
+    id: keyId,
+    name,
+    project_id: projectId,
+    key_prefix: key.slice(0, 11),
+    scopes: scopes || [],
+    is_active: true,
+    created_by: "user-1",
+    created_at: new Date().toISOString(),
+  };
+
+  if (!data.apiKeys) {
+    data.apiKeys = {};
+  }
+  if (!data.apiKeys[projectId]) {
+    data.apiKeys[projectId] = [];
+  }
+
+  data.apiKeys[projectId] = [apiKey, ...data.apiKeys[projectId]];
+  saveStorage(data);
+  return { api_key: apiKey, key };
+}
+
+export function mockRotateApiKey(projectId, keyId) {
+  const data = readStorage();
+  const keys = data.apiKeys[projectId] || [];
+  const index = keys.findIndex((k) => k.id === keyId);
+  if (index === -1) return null;
+
+  const key = `ik_${btoa(`${keyId}rotated${Date.now()}`)
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 32)}`;
+  const apiKey = { ...keys[index], key_prefix: key.slice(0, 11) };
+  data.apiKeys[projectId][index] = apiKey;
+  saveStorage(data);
+  return { api_key: apiKey, key };
+}
+
+export function mockRevokeApiKey(projectId, keyId) {
+  const data = readStorage();
+  const keys = data.apiKeys[projectId] || [];
+  const index = keys.findIndex((k) => k.id === keyId);
+  if (index === -1) return null;
+
+  const apiKey = {
+    ...keys[index],
+    is_active: false,
+    revoked_at: new Date().toISOString(),
+  };
+  data.apiKeys[projectId][index] = apiKey;
+  saveStorage(data);
+  return apiKey;
 }
 
 export function resetMockData() {
