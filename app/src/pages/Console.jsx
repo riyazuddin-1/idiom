@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Route, Routes } from "react-router-dom";
+
 import {
   clearAccessToken,
   isAuthenticated,
@@ -8,9 +9,14 @@ import {
 
 import "../styles/Console.css";
 import useFetch from "../hooks/useFetch";
+import Projects from "./Projects";
 import FloatingInput from "../components/FloatingInput";
 
-const Organizations = ({ setOrganization, setToggleOrganization }) => {
+const Organizations = ({
+  organization,
+  setOrganization,
+  setToggleOrganization,
+}) => {
   const {
     data: organizations,
     loading,
@@ -51,11 +57,18 @@ const Organizations = ({ setOrganization, setToggleOrganization }) => {
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key == "Enter") {
-      handleCreate(e);
+  useEffect(() => {
+    if (!organizations || !organizations.length) return;
+    const organizationId = window.sessionStorage.getItem("organizationId");
+    if (
+      organizationId &&
+      organizations.filter((org) => org.id == organizationId).length > 0
+    ) {
+      setOrganization(
+        organizations.filter((org) => org.id == organizationId)[0],
+      );
     }
-  };
+  }, [organizations]);
 
   return (
     <div
@@ -102,7 +115,15 @@ const Organizations = ({ setOrganization, setToggleOrganization }) => {
           organizations.length > 0 && (
             <ul className="organizations-list">
               {organizations.map((org) => (
-                <li key={org.id} onClick={() => setOrganization(org)}>
+                <li
+                  key={org.id}
+                  onClick={() => {
+                    if (org.id != organization?.id) {
+                      setOrganization(org);
+                    }
+                    setToggleOrganization(false);
+                  }}
+                >
                   {org.name}
                 </li>
               ))}
@@ -128,13 +149,19 @@ const Organizations = ({ setOrganization, setToggleOrganization }) => {
 const Console = ({ onLogin }) => {
   const isLoggedIn = isAuthenticated();
   const [organization, setOrganization] = useState(null);
-  const [toggleOrganization, setToggleOrganization] = useState(true);
+  const [toggleOrganization, setToggleOrganization] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn && !isMockAuthEnabled() && typeof onLogin === "function") {
       onLogin();
     }
   }, [isLoggedIn, onLogin]);
+
+  useEffect(() => {
+    if (organization) {
+      window.sessionStorage.setItem("organizationId", organization.id);
+    }
+  }, [organization]);
 
   const handleLogout = () => {
     clearAccessToken();
@@ -153,6 +180,7 @@ const Console = ({ onLogin }) => {
     <div className="console">
       {!organization ? (
         <Organizations
+          organization={organization}
           setOrganization={setOrganization}
           setToggleOrganization={setToggleOrganization}
         />
@@ -164,27 +192,33 @@ const Console = ({ onLogin }) => {
                 {organization.name}
               </h1>
             </div>
+
             <nav className="sidebar-nav">
-              <NavLink
-                to={`/console/organizations/${organization.id}/projects`}
-              >
-                Projects
-              </NavLink>
+              <NavLink to="/console/projects">Projects</NavLink>
             </nav>
+
             <div className="sidebar-footer">
               <button onClick={handleLogout}>Log out</button>
             </div>
           </aside>
+
           <main className="console-main">
-            <Outlet />
+            <Routes>
+              <Route
+                path="/projects"
+                element={<Projects organization={organization} />}
+              />
+            </Routes>
           </main>
-          {toggleOrganization && (
-            <Organizations
-              setOrganization={setOrganization}
-              setToggleOrganization={setToggleOrganization}
-            />
-          )}
         </div>
+      )}
+
+      {organization && toggleOrganization && (
+        <Organizations
+          organization={organization}
+          setOrganization={setOrganization}
+          setToggleOrganization={setToggleOrganization}
+        />
       )}
     </div>
   );

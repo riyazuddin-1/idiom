@@ -4,7 +4,6 @@ import Callback from "./pages/Callback";
 import Console from "./pages/Console";
 import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/Home";
-import Projects from "./pages/Projects";
 import "./App.css";
 
 const AUTH_LOGIN_URL =
@@ -27,13 +26,12 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/callback" element={<Callback />} />
           <Route
-            path="/console"
+            path="/console/*"
             element={
               <Console onLogin={() => (window.location.href = AUTH_LOGIN_URL)} />
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="organizations/:oid/projects" element={<Projects />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

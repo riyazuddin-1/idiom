@@ -5,14 +5,13 @@ import apiFetch from "../api/client";
 import "../styles/Projects.css";
 import FloatingInput from "../components/FloatingInput";
 
-const Projects = () => {
-  const { oid } = useParams();
+const Projects = ({organization}) => {
   const {
     data: projects,
     loading,
     error,
     refetch,
-  } = useFetch(`/api/v1/organizations/${oid}/projects`);
+  } = useFetch(`/api/v1/organizations/${organization.id}/projects`);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
