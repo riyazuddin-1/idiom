@@ -88,11 +88,9 @@
   right: 0;
   bottom: 0;
 
-  padding: 20px;
-
   cursor: no-drop;
 
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgba(0, 0, 0, 0.8);
 
   .organizations-container {
     cursor: default;
@@ -102,7 +100,15 @@
     margin: auto;
     padding: 20px;
     max-width: 720px;
-    background-color: var(--code-bg);
+
+    .organizations-header {
+      display: flex;
+
+      button {
+        margin-left: auto;
+        padding: 10px;
+      }
+    }
   }
 
   .organizations-list {
@@ -111,11 +117,24 @@
     flex-direction: column;
     gap: 10px;
 
+    max-height: 60vh;
+    overflow: auto;
+
     li {
       padding: 10px;
       border: 1px solid;
       border-radius: 12px;
       cursor: pointer;
+      background-color: var(--accent-bg);
+
+      &.active {
+        background-color: var(--accent);
+        color: var(--code-bg);
+      }
+    }
+
+    li:hover:not(.active) {
+      background-color: var(--bg);
     }
   }
 
@@ -124,5 +143,12 @@
     padding: 16px;
     border: none;
     border-radius: 12px;
+    background-color: var(--theme-contrast);
+    color: var(--theme);
+  }
+  .toggle-create:hover {
+    background-color: var(--theme);
+    color: var(--theme-contrast);
+    border: 1px solid var(--theme-contrast);
   }
 }

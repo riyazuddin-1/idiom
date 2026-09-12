@@ -80,10 +80,15 @@ const Organizations = ({
         className="organizations-container"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2>Organizations</h2>
+        <div className="organizations-header">
+          <h2>Organizations</h2>
+          {organization && (
+            <button onClick={() => setToggleOrganization(false)}>⨉</button>
+          )}
+        </div>
 
         {showForm && (
-          <form onSubmit={handleCreate} style={{ marginBottom: 20 }}>
+          <form onSubmit={handleCreate}>
             <div className="form-row">
               <div className="form-field">
                 <FloatingInput
@@ -124,6 +129,7 @@ const Organizations = ({
                     }
                     setToggleOrganization(false);
                   }}
+                  className={org.id == organization?.id ? "active" : ""}
                 >
                   {org.name}
                 </li>
