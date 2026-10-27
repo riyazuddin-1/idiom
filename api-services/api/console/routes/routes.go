@@ -104,45 +104,36 @@ func Mount(mux *http.ServeMux, appConfig config.AppConfig) {
 	})
 
 	// Project API key routes
-	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handler.ListProjectAPIKeysHandler(w, r)
-		case http.MethodPost:
-			handler.CreateProjectAPIKeyHandler(w, r)
-		default:
-			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
-		}
-	})
+	// mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys", func(w http.ResponseWriter, r *http.Request) {
+	// 	switch r.Method {
+	// 	case http.MethodGet:
+	// 		handler.ListProjectAPIKeysHandler(w, r)
+	// 	case http.MethodPost:
+	// 		handler.CreateProjectAPIKeyHandler(w, r)
+	// 	default:
+	// 		response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+	// 	}
+	// })
 
-	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPut:
-			handler.UpdateProjectAPIKeyHandler(w, r)
-			return
-		case http.MethodDelete:
-			handler.RevokeProjectAPIKeyHandler(w, r)
-			return
-		default:
-			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
-		}
-	})
+	// mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}", func(w http.ResponseWriter, r *http.Request) {
+	// 	switch r.Method {
+	// 	case http.MethodPut:
+	// 		handler.UpdateProjectAPIKeyHandler(w, r)
+	// 		return
+	// 	case http.MethodDelete:
+	// 		handler.RevokeProjectAPIKeyHandler(w, r)
+	// 		return
+	// 	default:
+	// 		response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+	// 	}
+	// })
 
-	mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}/rotate", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
-			return
-		}
+	// mux.HandleFunc("/organizations/{oid}/projects/{pid}/api-keys/{kid}/rotate", func(w http.ResponseWriter, r *http.Request) {
+	// 	if r.Method != http.MethodPost {
+	// 		response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+	// 		return
+	// 	}
 
-		handler.RotateProjectAPIKeyHandler(w, r)
-	})
-
-	mux.HandleFunc("/stress-test", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
-			return
-		}
-
-		handler.StressTestHandler(w, r)
-	})
+	// 	handler.RotateProjectAPIKeyHandler(w, r)
+	// })
 }
