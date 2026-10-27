@@ -49,8 +49,14 @@ func main() {
 
 	apiHandler := middlewares.CORS(config.AllowedOrigins, http.StripPrefix("/api/v1", apiMux))
 	mux.Handle("/api/v1/", apiHandler)
-	mux.Handle("/auth/v1/", middlewares.CORS(config.AllowedOrigins, http.StripPrefix("/auth/v1", apiMux)))
 	mux.Handle("/", webMux)
+
+	mux.Handle(
+		"GET /.well-known/jwks.json",
+		handlers.NewJWKSHandler(
+			appConfig,
+		),
+	)
 
 	server := &http.Server{
 		Addr:    ":8080",

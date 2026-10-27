@@ -54,7 +54,14 @@ func (j *JWTSettings) CreateToken(customClaims CustomClaims) (string, error) {
 		return "", err
 	}
 
+	kid, err := keyID(&privateKey.PublicKey)
+	if err != nil {
+		return "", err
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = kid
+
 	tokenString, err := token.SignedString(privateKey)
 	if err != nil {
 		return "", err
@@ -69,13 +76,34 @@ func (j *JWTSettings) VerifyToken(tokenString string) (*TokenClaims, error) {
 		return nil, err
 	}
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if token.Method != jwt.SigningMethodRS256 {
-			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
-		}
+	expectedKid, err := keyID(publicKey)
+	if err != nil {
+		return nil, err
+	}
 
-		return publicKey, nil
-	})
+	token, err := jwt.Parse(
+		tokenString,
+		func(token *jwt.Token) (interface{}, error) {
+			if token.Method != jwt.SigningMethodRS256 {
+				return nil, fmt.Errorf(
+					"unexpected signing method: %s",
+					token.Method.Alg(),
+				)
+			}
+
+			if kid, ok := token.Header["kid"]; ok {
+				tokenKid, ok := kid.(string)
+				if !ok || tokenKid != expectedKid {
+					return nil, errors.New("unknown signing key")
+				}
+			}
+
+			return publicKey, nil
+		},
+		jwt.WithValidMethods([]string{
+			jwt.SigningMethodRS256.Alg(),
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}

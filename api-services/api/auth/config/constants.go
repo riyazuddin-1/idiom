@@ -10,7 +10,7 @@ const (
 	TokenExpirationInSeconds = 600
 	TokenIssuer              = "idiom:auth"
 
-	VerificationPath = "/auth/v1/verify"
+	VerificationPath = "/api/v1/verify"
 )
 
 func PasswordResetPath(projectID string) string {
