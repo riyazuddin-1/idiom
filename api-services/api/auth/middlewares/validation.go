@@ -168,12 +168,11 @@ func ValidateTokenRequest(w http.ResponseWriter, r *http.Request) (*TokenRequest
 			return nil, err
 		}
 		req.Code = r.FormValue("code")
-		req.ProjectID = r.FormValue("project_id")
 		req.APIKey = r.FormValue("api_key")
 	}
 
 	req.Code = strings.TrimSpace(req.Code)
-	req.ProjectID = strings.TrimSpace(req.ProjectID)
+	req.ProjectID = strings.TrimSpace(r.Header.Get("X-Project-ID"))
 	req.APIKey = strings.TrimSpace(req.APIKey)
 
 	if req.Code == "" || req.ProjectID == "" {

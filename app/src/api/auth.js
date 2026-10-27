@@ -42,8 +42,8 @@ export async function authenticate(code) {
 
   const response = await fetch(`${AUTH_BASE}/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, project_id: "idiom" }),
+    headers: { "Content-Type": "application/json", "X-Project-ID": "idiom" },
+    body: JSON.stringify({ code }),
     credentials: "include",
   });
 
