@@ -9,6 +9,9 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
+  const [redirectUrls, setRedirectUrls] = useState(
+    project.redirect_urls || [],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -23,7 +26,11 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, description }),
+          body: JSON.stringify({
+            name,
+            description,
+            redirect_urls: redirectUrls,
+          }),
         },
       );
 
@@ -46,8 +53,25 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
   const handleCancel = () => {
     setName(project.name);
     setDescription(project.description || "");
+    setRedirectUrls(project.redirect_urls || []);
     setError(null);
     setEditing(false);
+  };
+
+  const handleRedirectUrlChange = (index, field, value) => {
+    setRedirectUrls((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item,
+      ),
+    );
+  };
+
+  const handleAddRedirectUrl = () => {
+    setRedirectUrls((prev) => [...prev, { device: "web", url: "" }]);
+  };
+
+  const handleRemoveRedirectUrl = (index) => {
+    setRedirectUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (editing) {
@@ -56,6 +80,7 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
         <div className="section-header">
           <h3>Settings</h3>
         </div>
+
         <form onSubmit={handleSave} className="section-form">
           <div className="form-row">
             <div className="form-field">
@@ -69,6 +94,7 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
               />
             </div>
           </div>
+
           <div className="form-row" style={{ marginTop: 12 }}>
             <div className="form-field" style={{ width: "100%" }}>
               <FloatingInput
@@ -79,7 +105,98 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
               />
             </div>
           </div>
-          {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}
+
+          <div className="form-row" style={{ marginTop: 20 }}>
+            <div className="form-field" style={{ width: "100%" }}>
+              <div
+                className="section-header"
+                style={{ marginBottom: 12 }}
+              >
+                <div>
+                  <h4>Redirect URLs</h4>
+                  <p>Configure redirect URLs for web and mobile devices.</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleAddRedirectUrl}
+                >
+                  Add URL
+                </button>
+              </div>
+
+              {redirectUrls.length === 0 && (
+                <p>No redirect URLs configured.</p>
+              )}
+
+              {redirectUrls.map((redirect, index) => (
+                <div
+                  key={index}
+                  className="form-row"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div className="form-field" style={{ minWidth: 120 }}>
+                    <label htmlFor={`redirect-device-${index}`}>
+                      Device
+                    </label>
+                    <select
+                      id={`redirect-device-${index}`}
+                      value={redirect.device}
+                      onChange={(e) =>
+                        handleRedirectUrlChange(
+                          index,
+                          "device",
+                          e.target.value,
+                        )
+                      }
+                    >
+                      <option value="web">Web</option>
+                      <option value="mobile">Mobile</option>
+                    </select>
+                  </div>
+
+                  <div className="form-field" style={{ flex: 1 }}>
+                    <FloatingInput
+                      id={`redirect-url-${index}`}
+                      label="Redirect URL"
+                      type="url"
+                      required
+                      value={redirect.url}
+                      onChange={(e) =>
+                        handleRedirectUrlChange(
+                          index,
+                          "url",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => handleRemoveRedirectUrl(index)}
+                    aria-label={`Remove redirect URL ${index + 1}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <p className="error" style={{ marginTop: 8 }}>
+              {error}
+            </p>
+          )}
+
           <div className="form-actions" style={{ marginTop: 12 }}>
             <button
               type="button"
@@ -88,6 +205,7 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
             >
               Cancel
             </button>
+
             <button
               type="submit"
               className="btn btn-primary"
@@ -106,20 +224,46 @@ const ProjectSettings = ({ organization, project, onUpdated }) => {
       <div className="section-header">
         <div>
           <h3>Settings</h3>
-          <p>Project name and description.</p>
+          <p>Project name, description, and redirect URLs.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setEditing(true)}>
+
+        <button
+          className="btn btn-primary"
+          onClick={() => setEditing(true)}
+        >
           Edit
         </button>
       </div>
+
       <div className="settings-display">
         <div className="settings-row">
           <span className="settings-label">Name</span>
           <span>{project.name}</span>
         </div>
+
         <div className="settings-row">
           <span className="settings-label">Description</span>
           <span>{project.description || "—"}</span>
+        </div>
+
+        <div className="settings-row">
+          <span className="settings-label">Redirect URLs</span>
+          <div>
+            {project.redirect_urls?.length > 0 ? (
+              project.redirect_urls.map((redirect, index) => (
+                <div key={index} style={{ marginBottom: 12 }}>
+                  <p>
+                    <b>
+                      {redirect.device === "web" ? "Web" : "Mobile"}:
+                    </b>
+                  </p>
+                  <p>{redirect.url}</p>
+                </div>
+              ))
+            ) : (
+              <span>—</span>
+            )}
+          </div>
         </div>
       </div>
     </div>

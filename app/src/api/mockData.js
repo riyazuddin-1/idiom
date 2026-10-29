@@ -18,12 +18,29 @@ const defaultData = {
   projects: {
     "org-1": [
       {
-        id: "proj-web",
-        name: "Web App",
-        slug: "notelet",
-        status: "active",
-        createdAt: "2025-03-02T10:00:00.000Z",
-      },
+        "id": "prj_1a0180b99de",
+        "org_id": "org_1a01805c89b",
+        "name": "notelet",
+        "slug": "notelet",
+        "description": "",
+        "status": "active",
+        "auth_options": [
+            "email"
+        ],
+        "redirect_urls": [
+            {
+                "device": "web",
+                "url": "https://notelet-backend.vercel.app/auth/callback"
+            },
+            {
+                "device": "mobile",
+                "url": "https://notelet-backend.vercel.app/auth/callback"
+            }
+        ],
+        "allowed_origins": [],
+        "created_at": "2026-08-19T03:23:29.525282Z",
+        "updated_at": "2026-08-19T03:23:29.525282Z"
+    },
       {
         id: "proj-admin",
         name: "Admin Portal",
