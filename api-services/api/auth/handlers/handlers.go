@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/helpers"
 	"idiom-api-services/api/auth/middlewares"
@@ -10,10 +9,10 @@ import (
 	"idiom-api-services/domains/projects"
 	"idiom-api-services/domains/sessions"
 	"idiom-api-services/packages/crypto"
+	"idiom-api-services/packages/jwt"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -117,7 +116,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 	req, err := middlewares.ValidateTokenRequest(w, r)
 	if err != nil {
 		return
@@ -154,20 +153,6 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-
-	// r, err = middlewares.VerifyAPIKey(
-	// 	h.apiKeyRepo,
-	// 	project.ID,
-	// 	w,
-	// 	r,
-	// )
-	// if err != nil {
-	// 	log.Printf(
-	// 		"token exchange api key verification failed project=%q: %v",
-	// 		project.ID,
-	// 		err,
-	// 	)
-	// }
 
 	var payload loginCodeScope
 
@@ -212,14 +197,7 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := sessions.IssueTokens(
-		r.Context(),
-		h.sessionRepo,
-		h.config.JWTSettings,
-		payload.SessionID,
-		payload.IdentityID,
-		payload.ProjectID,
-	)
+	sessionToken, err := sessions.IssueToken(r.Context(), h.sessionRepo, payload.SessionID, payload.IdentityID, payload.ProjectID, h.config.VerificationSecret)
 	if err != nil {
 		log.Printf(
 			"token exchange issue failed project=%q session=%q identity=%q: %v",
@@ -237,9 +215,9 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    tokens.RefreshToken,
-		Path:     "/api/v1/token/refresh",
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/api/v1/",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
@@ -248,13 +226,36 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf(
 		"token exchange succeeded project=%q identity=%q session=%q",
 		project.ID,
-		tokens.IdentityID,
-		tokens.SessionID,
+		payload.SessionID,
+		payload.IdentityID,
 	)
 
+	accessToken, err := h.config.JWTSettings.CreateToken(jwt.CustomClaims{
+		"sid": payload.SessionID,
+		"sub": payload.IdentityID,
+		"pid": payload.ProjectID,
+	})
+
 	response.OK(w, "Token issued successfully", map[string]interface{}{
-		"accessToken":  tokens.AccessToken,
-		"refreshToken": tokens.RefreshToken,
+		"accessToken": accessToken,
+	})
+}
+
+func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := middlewares.VerifySessionToken(h.config.VerificationSecret, h.sessionRepo, w, r)
+
+	if err != nil {
+		return
+	}
+
+	accessToken, err := h.config.JWTSettings.CreateToken(jwt.CustomClaims{
+		"sid": session.SessionID,
+		"sub": session.IdentityID,
+		"pid": session.ProjectID,
+	})
+
+	response.OK(w, "Token issued successfully", map[string]interface{}{
+		"accessToken": accessToken,
 	})
 }
 
@@ -278,9 +279,9 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("logout succeeded project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
+		Name:     "session_token",
 		Value:    "",
-		Path:     "/api/v1/token/refresh",
+		Path:     "/api/v1/",
 		HttpOnly: true,
 		Secure:   true,
 		MaxAge:   -1,
@@ -459,68 +460,6 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	log.Printf("password update succeeded project=%q email=%q", projectID, payload.Email)
 
 	response.OK(w, "Password updated successfully", nil)
-}
-
-// Session management
-func (h *Handler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
-	var refreshTokenValue string
-
-	cookie, err := r.Cookie("refresh_token")
-	if err == nil && cookie.Value != "" {
-		refreshTokenValue = cookie.Value
-	}
-
-	if refreshTokenValue == "" {
-		var body struct {
-			RefreshToken string `json:"refresh_token"`
-		}
-		if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
-			if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
-				refreshTokenValue = body.RefreshToken
-			}
-		} else if err := r.ParseForm(); err == nil {
-			refreshTokenValue = r.FormValue("refresh_token")
-		}
-	}
-
-	if refreshTokenValue == "" {
-		log.Printf("token refresh failed: missing refresh token")
-		response.Error(w, http.StatusUnauthorized, "Refresh token not found")
-		return
-	}
-
-	tokens, err := sessions.Refresh(r.Context(), h.sessionRepo, h.config.JWTSettings, refreshTokenValue)
-
-	if err != nil {
-		log.Printf("token refresh failed: %v", err)
-		http.SetCookie(w, &http.Cookie{
-			Name:     "refresh_token",
-			Value:    "",
-			Path:     "/api/v1/token/refresh",
-			HttpOnly: true,
-			Secure:   true,
-			MaxAge:   -1,
-			Expires:  time.Unix(0, 0),
-		})
-		response.Error(w, http.StatusUnauthorized, "Invalid refresh token")
-		return
-	}
-
-	log.Printf("token refresh succeeded project=%q identity=%q session=%q", tokens.ProjectID, tokens.IdentityID, tokens.SessionID)
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    tokens.RefreshToken,
-		Path:     "/api/v1/token/refresh",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
-	})
-
-	response.OK(w, "Token refreshed successfully", map[string]interface{}{
-		"accessToken":  tokens.AccessToken,
-		"refreshToken": tokens.RefreshToken,
-	})
 }
 
 // User

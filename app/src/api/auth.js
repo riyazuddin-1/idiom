@@ -40,7 +40,7 @@ export async function authenticate(code) {
     return MOCK_TOKEN;
   }
 
-  const response = await fetch(`${AUTH_BASE}/token`, {
+  const response = await fetch(`${AUTH_BASE}/session/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Project-ID": "idiom" },
     body: JSON.stringify({ code }),
@@ -62,7 +62,7 @@ export async function reAuthenticate() {
     return MOCK_TOKEN;
   }
 
-  const response = await fetch(`${AUTH_BASE}/token/refresh`, {
+  const response = await fetch(`${AUTH_BASE}/token`, {
     method: "POST",
     credentials: "include",
   });

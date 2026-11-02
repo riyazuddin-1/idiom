@@ -5,10 +5,13 @@ import (
 	"errors"
 	apikeys "idiom-api-services/domains/api_keys"
 	"idiom-api-services/domains/projects"
+	"idiom-api-services/domains/sessions"
+	"idiom-api-services/packages/crypto"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"idiom-api-services/packages/jwt"
 )
@@ -68,6 +71,30 @@ func VerifyAPIKey(apiKeyRepo *apikeys.Repository, projectID string, w http.Respo
 	}
 
 	return r.WithContext(ContextWithAPIKey(r.Context(), key)), nil
+}
+
+func VerifySessionToken(verificationSecret string, sessionRepo *sessions.Repository, w http.ResponseWriter, r *http.Request) (*sessions.SessionToken, error) {
+	var sessionToken string
+	cookie, err := r.Cookie("session_token")
+	if err == nil && cookie.Value != "" {
+		sessionToken = cookie.Value
+	}
+
+	var session sessions.SessionToken
+	err = crypto.DecryptJSON(sessionToken, verificationSecret, &session)
+
+	if err != nil {
+		return nil, err
+	}
+
+	sessionData, err := sessionRepo.GetBySessionID(r.Context(), session.SessionID)
+
+	if session.IdentityID != sessionData.IdentityID || sessionData.ExpiresAt.After(time.Now()) {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, err
+	}
+
+	return &session, nil
 }
 
 func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {

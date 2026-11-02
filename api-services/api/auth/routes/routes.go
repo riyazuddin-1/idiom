@@ -18,6 +18,14 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		handler.LoginHandler(w, r)
 	})
 
+	mux.HandleFunc("/session/token", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+		handler.SessionTokenHandler(w, r)
+	})
+
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -86,14 +94,5 @@ func Mount(mux *http.ServeMux, handler *handlers.Handler, appConfig config.AppCo
 		default:
 			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
 		}
-	})
-
-	mux.HandleFunc("/token/refresh", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
-			return
-		}
-
-		handler.RefreshTokenHandler(w, r)
 	})
 }
