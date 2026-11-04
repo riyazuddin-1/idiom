@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -37,6 +38,9 @@ func CORS(next http.Handler) http.Handler {
 		}
 
 		origin := r.Header.Get("Origin")
+
+		fmt.Println("Requested from origin:", origin)
+		fmt.Println("Requesting to host:", r.Header.Get("Host"))
 
 		// Same-origin requests don't require CORS.
 		if origin == "" || origin == r.Header.Get("Host") ||
