@@ -12,28 +12,33 @@ var defaultAllowedOrigins = map[string]struct{}{
 // CORS adds the headers required by browser clients and handles preflight
 // requests before they reach individual API route handlers.
 func CORS(allowedOrigins string, next http.Handler) http.Handler {
-	configuredOrigins := parseOrigins(allowedOrigins)
+	// configuredOrigins := parseOrigins(allowedOrigins)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if isAllowedOrigin(origin, configuredOrigins) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Add("Vary", "Origin")
-		}
+		// origin := r.Header.Get("Origin")
+		// if isAllowedOrigin(origin, configuredOrigins) {
+		// 	w.Header().Set("Access-Control-Allow-Origin", origin)
+		// 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+		// 	w.Header().Add("Vary", "Origin")
+		// }
 
-		if r.Method == http.MethodOptions {
-			if origin == "" || !isAllowedOrigin(origin, configuredOrigins) {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
+		// if r.Method == http.MethodOptions {
+		// 	if origin == "" || !isAllowedOrigin(origin, configuredOrigins) {
+		// 		w.WriteHeader(http.StatusForbidden)
+		// 		return
+		// 	}
 
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Project-ID")
-			w.Header().Set("Access-Control-Max-Age", "600")
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+		// 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		// 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Project-ID")
+		// 	w.Header().Set("Access-Control-Max-Age", "600")
+		// 	w.WriteHeader(http.StatusNoContent)
+		// 	return
+		// }
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Project-ID")
+		w.Header().Set("Access-Control-Max-Age", "600")
 
 		next.ServeHTTP(w, r)
 	})
