@@ -37,6 +37,15 @@ func CORS(next http.Handler) http.Handler {
 		}
 
 		origin := r.Header.Get("Origin")
+
+		// Same-origin requests don't require CORS.
+		if origin == "" || origin == r.Header.Get("Host") ||
+			origin == "https://"+r.Header.Get("Host") ||
+			origin == "http://"+r.Header.Get("Host") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		projectID := r.Header.Get("X-Project-ID")
 
 		allowed_origins, exists := origins[projectID]
