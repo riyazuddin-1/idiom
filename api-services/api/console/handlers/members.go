@@ -4,19 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	authmiddlewares "idiom-api-services/api/auth/middlewares"
+	"idiom-api-services/api/console/config"
 	"idiom-api-services/domains/org_members"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 )
 
-func (h *Handler) ListOrganizationMembersHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization members list failed: unauthorized: %v", err)
-		return
-	}
-
+func ListOrganizationMembersHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization members list failed: missing authenticated user")
@@ -32,7 +27,7 @@ func (h *Handler) ListOrganizationMembersHandler(w http.ResponseWriter, r *http.
 
 	members, err := org_members.ListByOrganizationID(
 		r.Context(),
-		h.memberRepo,
+		config.MemberRepo,
 		organizationID,
 	)
 	if err != nil {
@@ -56,13 +51,7 @@ func (h *Handler) ListOrganizationMembersHandler(w http.ResponseWriter, r *http.
 	response.OK(w, "Organization members retrieved", members)
 }
 
-func (h *Handler) UpdateOrganizationMemberStatusHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization member status update failed: unauthorized: %v", err)
-		return
-	}
-
+func UpdateOrganizationMemberStatusHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization member status update failed: missing authenticated user")
@@ -89,7 +78,7 @@ func (h *Handler) UpdateOrganizationMemberStatusHandler(w http.ResponseWriter, r
 
 	member, err := org_members.UpdateStatus(
 		r.Context(),
-		h.memberRepo,
+		config.MemberRepo,
 		organizationID,
 		identityID,
 		req.Status,
@@ -126,13 +115,7 @@ func (h *Handler) UpdateOrganizationMemberStatusHandler(w http.ResponseWriter, r
 	response.OK(w, "Member status updated", member)
 }
 
-func (h *Handler) DeleteOrganizationMemberHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization member delete failed: unauthorized: %v", err)
-		return
-	}
-
+func DeleteOrganizationMemberHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization member delete failed: missing authenticated user")
@@ -150,7 +133,7 @@ func (h *Handler) DeleteOrganizationMemberHandler(w http.ResponseWriter, r *http
 
 	if err := org_members.Delete(
 		r.Context(),
-		h.memberRepo,
+		config.MemberRepo,
 		organizationID,
 		identityID,
 	); err != nil {

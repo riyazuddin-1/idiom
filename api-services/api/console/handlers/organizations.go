@@ -4,19 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	authmiddlewares "idiom-api-services/api/auth/middlewares"
+	"idiom-api-services/api/console/config"
 	"idiom-api-services/domains/organizations"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 )
 
-func (h *Handler) CreateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization create failed: unauthorized: %v", err)
-		return
-	}
-
+func CreateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization create failed: missing authenticated user")
@@ -32,7 +27,7 @@ func (h *Handler) CreateOrganizationHandler(w http.ResponseWriter, r *http.Reque
 
 	organization, err := organizations.Create(
 		r.Context(),
-		h.orgRepo,
+		config.OrganizationRepo,
 		user.IdentityID,
 		req,
 	)
@@ -61,13 +56,7 @@ func (h *Handler) CreateOrganizationHandler(w http.ResponseWriter, r *http.Reque
 	response.Created(w, "Organization created", organization)
 }
 
-func (h *Handler) UpdateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization update failed: unauthorized: %v", err)
-		return
-	}
-
+func UpdateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization update failed: missing authenticated user")
@@ -89,7 +78,7 @@ func (h *Handler) UpdateOrganizationHandler(w http.ResponseWriter, r *http.Reque
 
 	organization, err := organizations.Update(
 		r.Context(),
-		h.orgRepo,
+		config.OrganizationRepo,
 		user.IdentityID,
 		organizationID,
 		req,
@@ -115,13 +104,7 @@ func (h *Handler) UpdateOrganizationHandler(w http.ResponseWriter, r *http.Reque
 	response.OK(w, "Organization updated", organization)
 }
 
-func (h *Handler) UpdateOrganizationStatusHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization status update failed: unauthorized: %v", err)
-		return
-	}
-
+func UpdateOrganizationStatusHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization status update failed: missing authenticated user")
@@ -146,7 +129,7 @@ func (h *Handler) UpdateOrganizationStatusHandler(w http.ResponseWriter, r *http
 
 	organization, err := organizations.UpdateStatus(
 		r.Context(),
-		h.orgRepo,
+		config.OrganizationRepo,
 		user.IdentityID,
 		organizationID,
 		req.Status,
@@ -173,13 +156,7 @@ func (h *Handler) UpdateOrganizationStatusHandler(w http.ResponseWriter, r *http
 	response.OK(w, "Organization updated", organization)
 }
 
-func (h *Handler) DeleteOrganizationHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization delete failed: unauthorized: %v", err)
-		return
-	}
-
+func DeleteOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization delete failed: missing authenticated user")
@@ -195,7 +172,7 @@ func (h *Handler) DeleteOrganizationHandler(w http.ResponseWriter, r *http.Reque
 
 	if err := organizations.Delete(
 		r.Context(),
-		h.orgRepo,
+		config.OrganizationRepo,
 		user.IdentityID,
 		organizationID,
 	); err != nil {

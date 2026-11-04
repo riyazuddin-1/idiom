@@ -3,15 +3,11 @@ package middlewares
 import (
 	"context"
 	"errors"
-	apikeys "idiom-api-services/domains/api_keys"
 	"idiom-api-services/domains/projects"
-	"idiom-api-services/domains/sessions"
-	"idiom-api-services/packages/crypto"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"idiom-api-services/packages/jwt"
 )
@@ -51,69 +47,23 @@ func VerifyProject(projectRepo *projects.Repository, w http.ResponseWriter, r *h
 	return r.WithContext(ContextWithProject(r.Context(), project)), nil
 }
 
-func VerifyAPIKey(apiKeyRepo *apikeys.Repository, projectID string, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	apiKey := r.Header.Get("X-API-Key")
-	if apiKey == "" {
-		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, errors.New("api key missing")
-	}
-
-	key, err := apikeys.Verify(r.Context(), apiKeyRepo, projectID, apiKey)
-	if err != nil {
-		if errors.Is(err, apikeys.ErrInvalidKey) {
-			response.Error(w, http.StatusUnauthorized, "Unauthorized")
-			return nil, errors.New("invalid api key")
-		}
-
-		log.Printf("api key verification failed project=%q: %v", projectID, err)
-		response.Error(w, http.StatusInternalServerError, "Failed to verify API key")
-		return nil, err
-	}
-
-	return r.WithContext(ContextWithAPIKey(r.Context(), key)), nil
-}
-
-func VerifySessionToken(verificationSecret string, sessionRepo *sessions.Repository, w http.ResponseWriter, r *http.Request) (*sessions.SessionToken, error) {
-	var sessionToken string
-	cookie, err := r.Cookie("session_token")
-	if err == nil && cookie.Value != "" {
-		sessionToken = cookie.Value
-	}
-
-	var session sessions.SessionToken
-	err = crypto.DecryptJSON(sessionToken, verificationSecret, &session)
-
-	if err != nil {
-		return nil, err
-	}
-
-	sessionData, err := sessionRepo.GetBySessionID(r.Context(), session.SessionID)
-
-	if session.IdentityID != sessionData.IdentityID || sessionData.ExpiresAt.After(time.Now()) {
-		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, err
-	}
-
-	return &session, nil
-}
-
-func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, error) {
+func verifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *http.Request) (*http.Request, bool) {
 	authorization := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authorization, "Bearer ") {
 		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, errors.New("unauthorized")
+		return nil, false
 	}
 
 	token := authorization[len("Bearer "):]
 	if token == "" {
 		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, errors.New("unauthorized")
+		return nil, false
 	}
 
 	claims, err := jwtSettings.VerifyToken(token)
 	if err != nil {
 		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, errors.New("unauthorized")
+		return nil, false
 	}
 
 	identityID := claims.String("sub")
@@ -121,12 +71,12 @@ func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *htt
 	projectID := claims.String("pid")
 	if identityID == "" || sessionID == "" || projectID == "" {
 		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, errors.New("unauthorized")
+		return nil, false
 	}
 
 	if routeProject, ok := ProjectFromContext(r.Context()); ok && routeProject.ID != projectID {
 		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return nil, errors.New("unauthorized")
+		return nil, false
 	}
 
 	user := &AuthUser{
@@ -135,7 +85,21 @@ func VerifyUserToken(jwtSettings *jwt.JWTSettings, w http.ResponseWriter, r *htt
 		ProjectID:  projectID,
 	}
 
-	return r.WithContext(ContextWithUser(r.Context(), user)), nil
+	return r.WithContext(ContextWithUser(r.Context(), user)), true
+}
+
+func Authenticate(jwtSettings *jwt.JWTSettings) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r, ok := verifyUserToken(jwtSettings, w, r)
+			if !ok {
+				response.Error(w, http.StatusUnauthorized, "Unauthorized")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func ContextWithUser(ctx context.Context, user *AuthUser) context.Context {
@@ -154,13 +118,4 @@ func ContextWithProject(ctx context.Context, project *projects.Project) context.
 func ProjectFromContext(ctx context.Context) (*projects.Project, bool) {
 	project, ok := ctx.Value(projectContextKey).(*projects.Project)
 	return project, ok && project != nil
-}
-
-func ContextWithAPIKey(ctx context.Context, apiKey *apikeys.APIKey) context.Context {
-	return context.WithValue(ctx, apiKeyContextKey, apiKey)
-}
-
-func APIKeyFromContext(ctx context.Context) (*apikeys.APIKey, bool) {
-	apiKey, ok := ctx.Value(apiKeyContextKey).(*apikeys.APIKey)
-	return apiKey, ok && apiKey != nil
 }

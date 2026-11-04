@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func NewJWKSHandler(config config.AppConfig) http.HandlerFunc {
+func NewJWKSHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if config.JWTSettings == nil {
 			http.Error(w, "Signing key unavailable", http.StatusInternalServerError)

@@ -6,43 +6,32 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"idiom-api-services/api/console/config"
 	api "idiom-api-services/api/console/routes"
-	"idiom-api-services/packages/database/postgres"
-	"idiom-api-services/packages/jwt"
 	web "idiom-api-services/web/console/routes"
 )
 
 func main() {
-	ctx := context.Background()
-
-	// Database
-	pg, err := postgres.Init(ctx, config.PostgresDSN)
-	if err != nil {
-		log.Fatalf("failed to initialize postgres: %v", err)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
+	if err := config.Initialize(ctx); err != nil {
+		log.Fatal(err)
 	}
-	defer pg.Close()
-
-	// Shared app configuration
-	appConfig := config.AppConfig{
-		PostgresDB: pg,
-		JWTSettings: jwt.NewJWTSettings(
-			"",
-			config.JWTPublicKey,
-			0,
-			config.TokenIssuer,
-		),
-		AuthBaseURL: config.AuthBaseURL,
-		AuthProject: config.AuthProject,
-	}
+	defer config.Close()
 
 	// Root mux
 	mux := http.NewServeMux()
 
 	// API routes
 	apiMux := http.NewServeMux()
-	api.Mount(apiMux, appConfig)
+	api.Mount(apiMux)
 
 	// Web routes (React SPA)
 	webMux := http.NewServeMux()

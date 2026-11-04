@@ -4,19 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	authmiddlewares "idiom-api-services/api/auth/middlewares"
+	"idiom-api-services/api/console/config"
 	"idiom-api-services/domains/projects"
 	response "idiom-api-services/packages/responses"
 	"log"
 	"net/http"
 )
 
-func (h *Handler) ListOrganizationProjectsHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console organization projects list failed: unauthorized: %v", err)
-		return
-	}
-
+func ListOrganizationProjectsHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console organization projects list failed: missing authenticated user")
@@ -32,7 +27,7 @@ func (h *Handler) ListOrganizationProjectsHandler(w http.ResponseWriter, r *http
 
 	projectList, err := projects.ListByOrganizationID(
 		r.Context(),
-		h.projectRepo,
+		config.ProjectRepo,
 		organizationID,
 		user.IdentityID,
 	)
@@ -57,13 +52,7 @@ func (h *Handler) ListOrganizationProjectsHandler(w http.ResponseWriter, r *http
 	response.OK(w, "Projects retrieved", projectList)
 }
 
-func (h *Handler) CreateOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console project create failed: unauthorized: %v", err)
-		return
-	}
-
+func CreateOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console project create failed: missing authenticated user")
@@ -85,7 +74,7 @@ func (h *Handler) CreateOrganizationProjectHandler(w http.ResponseWriter, r *htt
 
 	project, err := projects.Create(
 		r.Context(),
-		h.projectRepo,
+		config.ProjectRepo,
 		organizationID,
 		user.IdentityID,
 		req,
@@ -120,13 +109,7 @@ func (h *Handler) CreateOrganizationProjectHandler(w http.ResponseWriter, r *htt
 	response.Created(w, "Project created", project)
 }
 
-func (h *Handler) GetOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console project get failed: unauthorized: %v", err)
-		return
-	}
-
+func GetOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console project get failed: missing authenticated user")
@@ -144,7 +127,7 @@ func (h *Handler) GetOrganizationProjectHandler(w http.ResponseWriter, r *http.R
 
 	project, err := projects.Get(
 		r.Context(),
-		h.projectRepo,
+		config.ProjectRepo,
 		organizationID,
 		projectID,
 		user.IdentityID,
@@ -169,13 +152,7 @@ func (h *Handler) GetOrganizationProjectHandler(w http.ResponseWriter, r *http.R
 	response.OK(w, "Project retrieved", project)
 }
 
-func (h *Handler) UpdateOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console project update failed: unauthorized: %v", err)
-		return
-	}
-
+func UpdateOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console project update failed: missing authenticated user")
@@ -199,7 +176,7 @@ func (h *Handler) UpdateOrganizationProjectHandler(w http.ResponseWriter, r *htt
 
 	project, err := projects.Update(
 		r.Context(),
-		h.projectRepo,
+		config.ProjectRepo,
 		organizationID,
 		projectID,
 		user.IdentityID,
@@ -236,13 +213,7 @@ func (h *Handler) UpdateOrganizationProjectHandler(w http.ResponseWriter, r *htt
 	response.OK(w, "Project updated", project)
 }
 
-func (h *Handler) DeleteOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
-	r, err := authmiddlewares.VerifyUserToken(h.config.JWTSettings, w, r)
-	if err != nil {
-		log.Printf("console project delete failed: unauthorized: %v", err)
-		return
-	}
-
+func DeleteOrganizationProjectHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := authmiddlewares.UserFromContext(r.Context())
 	if !ok {
 		log.Printf("console project delete failed: missing authenticated user")
@@ -260,7 +231,7 @@ func (h *Handler) DeleteOrganizationProjectHandler(w http.ResponseWriter, r *htt
 
 	if err := projects.Delete(
 		r.Context(),
-		h.projectRepo,
+		config.ProjectRepo,
 		organizationID,
 		projectID,
 		user.IdentityID,

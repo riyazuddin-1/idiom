@@ -5,44 +5,33 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os/signal"
+	"syscall"
 
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/handlers"
 	"idiom-api-services/api/auth/middlewares"
 	api "idiom-api-services/api/auth/routes"
-	"idiom-api-services/packages/database/postgres"
-	"idiom-api-services/packages/email"
-	"idiom-api-services/packages/jwt"
 	web "idiom-api-services/web/auth/routes"
 )
 
 func main() {
-	ctx := context.Background()
-	pg, err := postgres.Init(ctx, config.PostgresDSN)
-	if err != nil {
-		log.Fatalf("failed to initialize postgres: %v", err)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
+	if err := config.Initialize(ctx); err != nil {
+		log.Fatal(err)
 	}
-	defer pg.Close()
+	defer config.Close()
 
-	appConfig := config.AppConfig{
-		JWTSettings: jwt.NewJWTSettings(
-			config.JWTPrivateKey,
-			config.JWTPublicKey,
-			config.TokenExpirationInSeconds,
-			config.TokenIssuer,
-		),
-		EmailSender:        email.NewHTTPMailSender(),
-		AuthBaseURL:        config.AuthBaseURL,
-		VerificationSecret: config.VerificationSecret,
-		PostgresDB:         pg,
-	}
-
-	authHandler := handlers.NewHandler(appConfig)
 	mux := http.NewServeMux()
 
 	// API v1 subrouter
 	apiMux := http.NewServeMux()
-	api.Mount(apiMux, authHandler, appConfig)
+	api.Mount(apiMux)
 
 	webMux := http.NewServeMux()
 	web.Mount(webMux)
@@ -53,9 +42,7 @@ func main() {
 
 	mux.Handle(
 		"GET /.well-known/jwks.json",
-		handlers.NewJWKSHandler(
-			appConfig,
-		),
+		handlers.NewJWKSHandler(),
 	)
 
 	server := &http.Server{

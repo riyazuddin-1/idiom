@@ -52,6 +52,22 @@ func IssueToken(ctx context.Context, repo *Repository, sessionID, identityID, pr
 	}, verificationSecret)
 }
 
+func DecodeSession(ctx context.Context, repo *Repository, token, verificationSecret string) *SessionToken {
+	var session SessionToken
+	err := crypto.DecryptJSON(token, verificationSecret, &session)
+
+	if err != nil {
+		return nil
+	}
+
+	sessionData, err := repo.GetBySessionID(ctx, session.SessionID)
+
+	if session.IdentityID != sessionData.IdentityID || sessionData.ExpiresAt.After(time.Now()) {
+		return nil
+	}
+	return &session
+}
+
 func Revoke(ctx context.Context, repo *Repository, sessionID string) (bool, error) {
 	return repo.RevokeSession(ctx, sessionID)
 }

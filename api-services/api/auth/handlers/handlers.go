@@ -4,7 +4,6 @@ import (
 	"idiom-api-services/api/auth/config"
 	"idiom-api-services/api/auth/helpers"
 	"idiom-api-services/api/auth/middlewares"
-	apikeys "idiom-api-services/domains/api_keys"
 	"idiom-api-services/domains/identities"
 	"idiom-api-services/domains/projects"
 	"idiom-api-services/domains/sessions"
@@ -16,14 +15,6 @@ import (
 	"time"
 )
 
-type Handler struct {
-	config      config.AppConfig
-	repo        *identities.Repository
-	sessionRepo *sessions.Repository
-	projectRepo *projects.Repository
-	apiKeyRepo  *apikeys.Repository
-}
-
 type loginCodeScope struct {
 	Operation  string `json:"operation"`
 	ProjectID  string `json:"pid"`
@@ -32,21 +23,11 @@ type loginCodeScope struct {
 	ExpiresAt  int64  `json:"exp"`
 }
 
-func NewHandler(config config.AppConfig) *Handler {
-	return &Handler{
-		config:      config,
-		repo:        identities.NewRepository(config.PostgresDB),
-		sessionRepo: sessions.NewRepository(config.PostgresDB),
-		projectRepo: projects.NewRepository(config.PostgresDB),
-		apiKeyRepo:  apikeys.NewRepository(config.PostgresDB),
-	}
-}
-
-func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	routeProjectID := r.PathValue("project_id")
 	path := r.URL.Path
 	var err error
-	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	r, err = middlewares.VerifyProject(config.ProjectRepo, w, r)
 	if err != nil {
 		log.Printf("login project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
@@ -64,21 +45,21 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	projectID := project.ID
 
-	identity, ok, err := identities.Login(r.Context(), h.repo, projectID, req.Email, req.Password)
+	identity, ok, err := identities.Login(r.Context(), config.IdentityRepo, projectID, req.Email, req.Password)
 	if err != nil || !ok {
 		log.Printf("login failed project=%q email=%q", projectID, req.Email)
 		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
-	if h.config.JWTSettings == nil {
+	if config.JWTSettings == nil {
 		response.Error(w, http.StatusInternalServerError, "JWT settings are not configured")
 		return
 	}
 
 	session, err := sessions.Create(
 		r.Context(),
-		h.sessionRepo,
+		config.SessionRepo,
 		identity,
 		r.RemoteAddr,
 		r.UserAgent(),
@@ -95,7 +76,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		IdentityID: identity.ID,
 		SessionID:  session.ID,
 		ExpiresAt:  time.Now().UTC().Add(60 * time.Second).Unix(),
-	}, h.config.VerificationSecret)
+	}, config.VerificationSecret)
 	if err != nil {
 		log.Printf("login code creation failed project=%q email=%q identity=%q session=%q: %v", projectID, req.Email, identity.ID, session.ID, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to start session")
@@ -116,7 +97,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
+func SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 	req, err := middlewares.ValidateTokenRequest(w, r)
 	if err != nil {
 		return
@@ -124,7 +105,7 @@ func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	project, ok, err := projects.ResolveActive(
 		r.Context(),
-		h.projectRepo,
+		config.ProjectRepo,
 		req.ProjectID,
 	)
 	if err != nil {
@@ -158,7 +139,7 @@ func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := crypto.DecryptJSON(
 		req.Code,
-		h.config.VerificationSecret,
+		config.VerificationSecret,
 		&payload,
 	); err != nil {
 		log.Printf(
@@ -197,7 +178,7 @@ func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionToken, err := sessions.IssueToken(r.Context(), h.sessionRepo, payload.SessionID, payload.IdentityID, payload.ProjectID, h.config.VerificationSecret)
+	sessionToken, err := sessions.IssueToken(r.Context(), config.SessionRepo, payload.SessionID, payload.IdentityID, payload.ProjectID, config.VerificationSecret)
 	if err != nil {
 		log.Printf(
 			"token exchange issue failed project=%q session=%q identity=%q: %v",
@@ -230,7 +211,7 @@ func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 		payload.IdentityID,
 	)
 
-	accessToken, err := h.config.JWTSettings.CreateToken(jwt.CustomClaims{
+	accessToken, err := config.JWTSettings.CreateToken(jwt.CustomClaims{
 		"sid": payload.SessionID,
 		"sub": payload.IdentityID,
 		"pid": payload.ProjectID,
@@ -241,14 +222,21 @@ func (h *Handler) SessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := middlewares.VerifySessionToken(h.config.VerificationSecret, h.sessionRepo, w, r)
+func TokenHandler(w http.ResponseWriter, r *http.Request) {
+	var sessionToken string
+	cookie, err := r.Cookie("session_token")
+	if err == nil && cookie.Value != "" {
+		sessionToken = cookie.Value
+	}
 
-	if err != nil {
+	session := sessions.DecodeSession(r.Context(), config.SessionRepo, config.VerificationSecret, sessionToken)
+
+	if session == nil {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	accessToken, err := h.config.JWTSettings.CreateToken(jwt.CustomClaims{
+	accessToken, err := config.JWTSettings.CreateToken(jwt.CustomClaims{
 		"sid": session.SessionID,
 		"sub": session.IdentityID,
 		"pid": session.ProjectID,
@@ -259,7 +247,7 @@ func (h *Handler) TokenHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := middlewares.UserFromContext(r.Context())
 
 	if !ok {
@@ -268,7 +256,7 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	revoked, err := sessions.Revoke(r.Context(), h.sessionRepo, user.SessionID)
+	revoked, err := sessions.Revoke(r.Context(), config.SessionRepo, user.SessionID)
 
 	if err != nil || !revoked {
 		log.Printf("logout failed project=%q identity=%q session=%q: %v", user.ProjectID, user.IdentityID, user.SessionID, err)
@@ -291,11 +279,11 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, "Logout successful", nil)
 }
 
-func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	routeProjectID := r.PathValue("project_id")
 	path := r.URL.Path
 	var err error
-	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	r, err = middlewares.VerifyProject(config.ProjectRepo, w, r)
 	if err != nil {
 		log.Printf("register project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
@@ -313,7 +301,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	projectID := project.ID
 
-	identity, err := identities.Register(r.Context(), h.repo, identities.RegisterInput{
+	identity, err := identities.Register(r.Context(), config.IdentityRepo, identities.RegisterInput{
 		ProjectID:   projectID,
 		Email:       req.Email,
 		Password:    req.Password,
@@ -340,7 +328,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	response.Created(w, "User registered successfully", identity)
 }
 
-func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
+func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	scope := r.URL.Query().Get("scope")
 	if scope == "" {
 		log.Printf("email verification failed: missing scope")
@@ -349,7 +337,7 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload helpers.Scope
-	if err := crypto.DecryptJSON(scope, h.config.VerificationSecret, &payload); err != nil {
+	if err := crypto.DecryptJSON(scope, config.VerificationSecret, &payload); err != nil {
 		log.Printf("email verification failed: invalid scope: %v", err)
 		response.Error(w, http.StatusBadRequest, "Invalid verification scope")
 		return
@@ -367,7 +355,7 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := identities.VerifyEmail(r.Context(), h.repo, payload.ProjectID, payload.Email); err != nil {
+	if err := identities.VerifyEmail(r.Context(), config.IdentityRepo, payload.ProjectID, payload.Email); err != nil {
 		log.Printf("email verification failed project=%q email=%q: %v", payload.ProjectID, payload.Email, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to verify email")
 		return
@@ -378,11 +366,11 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, "Email verified successfully", nil)
 }
 
-func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
+func SendPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
 	routeProjectID := r.PathValue("project_id")
 	path := r.URL.Path
 	var err error
-	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	r, err = middlewares.VerifyProject(config.ProjectRepo, w, r)
 	if err != nil {
 		log.Printf("password reset request project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
@@ -400,7 +388,7 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 	}
 	projectID := project.ID
 
-	if err := helpers.SendPasswordResetEmail(r.Context(), h.config, projectID, req.Email); err != nil {
+	if err := helpers.SendPasswordResetEmail(r.Context(), projectID, req.Email); err != nil {
 		log.Printf("failed to send password reset email to %s: %v", req.Email, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to send password reset email")
 		return
@@ -411,11 +399,11 @@ func (h *Handler) SendPasswordResetHandler(w http.ResponseWriter, r *http.Reques
 	response.OK(w, "Password reset email sent", nil)
 }
 
-func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
+func UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	routeProjectID := r.PathValue("project_id")
 	path := r.URL.Path
 	var err error
-	r, err = middlewares.VerifyProject(h.projectRepo, w, r)
+	r, err = middlewares.VerifyProject(config.ProjectRepo, w, r)
 	if err != nil {
 		log.Printf("password update project verification failed project=%q path=%q: %v", routeProjectID, path, err)
 		return
@@ -427,7 +415,7 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var payload helpers.Scope
-	if err := crypto.DecryptJSON(req.Scope, h.config.VerificationSecret, &payload); err != nil {
+	if err := crypto.DecryptJSON(req.Scope, config.VerificationSecret, &payload); err != nil {
 		log.Printf("password update failed: invalid scope: %v", err)
 		response.Error(w, http.StatusBadRequest, "Invalid password reset scope")
 		return
@@ -451,7 +439,7 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	projectID := project.ID
 
-	if err := identities.UpdatePassword(r.Context(), h.repo, projectID, payload.Email, req.Password); err != nil {
+	if err := identities.UpdatePassword(r.Context(), config.IdentityRepo, projectID, payload.Email, req.Password); err != nil {
 		log.Printf("password update failed project=%q email=%q: %v", projectID, payload.Email, err)
 		response.Error(w, http.StatusInternalServerError, "Failed to update password")
 		return
@@ -463,14 +451,14 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 // User
-func (h *Handler) GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
+func GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 	if user, ok := middlewares.UserFromContext(r.Context()); ok {
 		log.Printf("current user read requested project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
 	}
 	// Implement logic to get current user information here
 }
 
-func (h *Handler) UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
+func UpdateCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 	if user, ok := middlewares.UserFromContext(r.Context()); ok {
 		log.Printf("current user update requested project=%q identity=%q session=%q", user.ProjectID, user.IdentityID, user.SessionID)
 	}

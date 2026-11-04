@@ -16,18 +16,18 @@ type Scope struct {
 	Email     string `json:"email"`
 }
 
-func SendVerificationEmail(ctx context.Context, appConfig config.AppConfig, identity *identities.Identity) error {
+func SendVerificationEmail(ctx context.Context, identity *identities.Identity) error {
 	scope, err := crypto.EncryptJSON(Scope{
 		Operation: config.OperationEmailVerification,
 		ProjectID: identity.ProjectID,
 		Email:     identity.Email,
-	}, appConfig.VerificationSecret)
+	}, config.VerificationSecret)
 	if err != nil {
 		return err
 	}
 
-	verifyURL := strings.TrimRight(appConfig.AuthBaseURL, "/") + config.VerificationPath + "?scope=" + url.QueryEscape(scope)
-	return appConfig.EmailSender.Send(ctx, email.Message{
+	verifyURL := strings.TrimRight(config.AuthBaseURL, "/") + config.VerificationPath + "?scope=" + url.QueryEscape(scope)
+	return config.EmailSender.Send(ctx, email.Message{
 		To:       identity.Email,
 		Subject:  "Verify your email",
 		TextBody: "Verify your email by opening this link:\n\n" + verifyURL,
@@ -35,18 +35,18 @@ func SendVerificationEmail(ctx context.Context, appConfig config.AppConfig, iden
 	})
 }
 
-func SendPasswordResetEmail(ctx context.Context, appConfig config.AppConfig, projectID, emailAddress string) error {
+func SendPasswordResetEmail(ctx context.Context, projectID, emailAddress string) error {
 	scope, err := crypto.EncryptJSON(Scope{
 		Operation: config.OperationPasswordReset,
 		ProjectID: projectID,
 		Email:     emailAddress,
-	}, appConfig.VerificationSecret)
+	}, config.VerificationSecret)
 	if err != nil {
 		return err
 	}
 
-	resetURL := strings.TrimRight(appConfig.AuthBaseURL, "/") + config.PasswordResetPath(projectID) + "?scope=" + url.QueryEscape(scope)
-	return appConfig.EmailSender.Send(ctx, email.Message{
+	resetURL := strings.TrimRight(config.AuthBaseURL, "/") + config.PasswordResetPath(projectID) + "?scope=" + url.QueryEscape(scope)
+	return config.EmailSender.Send(ctx, email.Message{
 		To:       emailAddress,
 		Subject:  "Reset your password",
 		TextBody: "Reset your password by opening this link:\n\n" + resetURL,
