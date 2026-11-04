@@ -47,7 +47,7 @@ func main() {
 	webMux := http.NewServeMux()
 	web.Mount(webMux)
 
-	apiHandler := middlewares.CORS(config.AllowedOrigins, http.StripPrefix("/api/v1", apiMux))
+	apiHandler := middlewares.CORS(http.StripPrefix("/api/v1", apiMux))
 	mux.Handle("/api/v1/", apiHandler)
 	mux.Handle("/", webMux)
 
