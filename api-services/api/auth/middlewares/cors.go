@@ -40,12 +40,12 @@ func CORS(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 
 		fmt.Println("Requested from origin:", origin)
-		fmt.Println("Requesting to host:", r.Header.Get("Host"))
+		fmt.Println("Requesting to host:", r.Host)
 
 		// Same-origin requests don't require CORS.
-		if origin == "" || origin == r.Header.Get("Host") ||
-			origin == "https://"+r.Header.Get("Host") ||
-			origin == "http://"+r.Header.Get("Host") {
+		if origin == "" || origin == r.Host ||
+			origin == "https://"+r.Host ||
+			origin == "http://"+r.Host {
 			next.ServeHTTP(w, r)
 			return
 		}
