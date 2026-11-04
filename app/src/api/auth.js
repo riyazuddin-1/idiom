@@ -5,7 +5,10 @@ const MOCK_TOKEN = "mock-dev-token";
 let accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
 
 export function isMockAuthEnabled() {
-  return import.meta.env.DEV && String(import.meta.env.VITE_USE_MOCK_AUTH || "").toLowerCase() === "true";
+  return (
+    import.meta.env.DEV &&
+    String(import.meta.env.VITE_USE_MOCK_AUTH || "").toLowerCase() === "true"
+  );
 }
 
 export function isAuthenticated() {
@@ -64,6 +67,9 @@ export async function reAuthenticate() {
 
   const response = await fetch(`${AUTH_BASE}/token`, {
     method: "POST",
+    headers: {
+      "X-Project-ID": "idiom",
+    },
     credentials: "include",
   });
 
