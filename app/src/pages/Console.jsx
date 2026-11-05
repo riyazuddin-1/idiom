@@ -201,8 +201,7 @@ const Console = ({ onLogin }) => {
             </div>
 
             <nav className="sidebar-nav">
-              {/* <NavLink to="/console/dashboard">Overview</NavLink> */}
-              <NavLink to="/console/projects">Projects</NavLink>
+              <NavLink to="/console">Overview</NavLink>
               {/* <hr/>
               <NavLink to="/console/organization">Workspace</NavLink>
               <NavLink to="/console/me">Me</NavLink> */}
@@ -214,11 +213,9 @@ const Console = ({ onLogin }) => {
           </aside>
 
           <main className="console-main">
+            <Projects organization={organization} />
             <Routes>
-              <Route
-                path="/projects"
-                element={<Projects organization={organization} />}
-              />
+
               <Route
                 path="/projects/:pid"
                 element={<Project organization={organization} />}

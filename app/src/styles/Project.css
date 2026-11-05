@@ -1,9 +1,13 @@
 .project-page {
+  margin-top: 20px;
   max-width: 900px;
+  display: flex;
+  flex-direction: column;
 }
 
 .btn-back {
   display: inline-block;
+  margin-inline-start: auto;
   margin-bottom: 16px;
   background: none;
   border: none;

@@ -4,15 +4,18 @@
 
 .console-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 
   .console-sidebar {
     width: 240px;
+    flex-shrink: 0;
+    height: 100%;
+    overflow-y: auto;
     background: var(--code-bg);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    flex-shrink: 0;
   }
 
   .sidebar-header {
@@ -75,8 +78,11 @@
     border-color: var(--accent-border);
   }
 
-  .console-main {
-    width: 100%;
+    .console-main {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
     padding: 20px;
   }
 }
